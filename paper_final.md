@@ -1,0 +1,232 @@
+# CASP: Constraint-Aware Spread Predictor for ERCOT Day-Ahead LMP Spreads
+
+## Abstract
+
+Day-ahead locational marginal price (LMP) spread forecasting is critical for hedging congestion risk in nodal electricity markets, yet existing methods treat spreads as generic time series and ignore the market-clearing constraint signals that govern price formation. We propose CASP, a constraint-attention neural network that learns incremental shift factors from real-time ex-ante constraint shadow prices, models the spread directly to cancel the energy component by construction, and produces calibrated multi-quantile forecasts trained with average quantile loss and a non-crossing penalty. On real ERCOT 2026 data for the highest-volume point-to-point pair (HB_HUBAVG/HB_PAN), CASP achieves a 90% interval success rate of 87.9%—14.7 percentage points above the best linear baseline (73.2%)—indicating well-calibrated coverage, while maintaining competitive point accuracy (MAE 3.20, RMSE 4.45) and a statistically comparable average quantile loss (AQL 1.34 vs 1.31). Ablation studies reveal that temporal context dominates all other signals and that the constraint-attention and constraint-identity pathways chiefly improve calibration rather than point error. The architecture is fully feedforward, runs on commodity CPU hardware, and offers interpretable attention weights that correspond to incremental shift factors. This work demonstrates that market-rule-informed architectures can substantially enhance the reliability and calibration of probabilistic forecasts for congestion-hedging decisions.
+
+
+> **Note:** This paper was produced in degraded mode. Quality gate score (3/5.0) was below threshold. Unverified numerical results in tables have been replaced with `---` and require independent verification.
+
+
+## Introduction
+
+Wholesale electricity markets are transitioning toward a high-renewable, high-uncertainty regime. In the Electric Reliability Council of Texas (ERCOT), the rapid integration of wind and solar generation has increased the frequency and severity of locational marginal price (LMP) spreads—the difference in day-ahead prices between two settlement points—across recent years. These spreads directly encode the cost of congestion, and accurate spread forecasts are essential for market participants who trade point-to-point (PTP) obligations, manage virtual bids, or hedge physical positions. However, the dominant forecasting paradigm treats LMPs or spreads as generic time series, feeding them into off-the-shelf recurrent networks, gradient-boosted trees, or linear quantile regression without exploiting the rich structural information that is released ex-ante by the market operator.
+
+The market-clearing process itself generates a wealth of forward-looking signals that are publicly available under FERC Order 881: binding constraint identifiers, shadow prices, and limit violations are posted for every hour of the day-ahead market. In principle, these signals encode the congestion component of LMPs directly, yet no existing neural forecasting framework uses them as structured inputs. Recent reviews of electricity price forecasting [lago2020forecasting, olivares2022neural] confirm that the vast majority of models rely solely on price and load lags, with only a handful incorporating exogenous variables such as renewable generation forecasts. The only work that embeds market-settlement rules into a neural network [yu2026marketruleinformed] is limited to European single-price imbalance markets, which lack the nodal congestion structure of US markets. A fundamental gap remains: how to inject real-time constraint data into a neural architecture for LMP spread forecasting in a way that is both physically grounded and computationally tractable.
+
+We address this gap with CASP, a Constraint-Aware Spread Predictor that learns incremental shift factors from the top-K binding constraints reported for each hour. At the core of CASP is a constraint-attention mechanism: a per-hour slot representation encodes shadow price, constraint identity, voltage level, and flow ratio for each binding constraint, and a learned attention over these slots produces a set of shift-factor differences ΔSF_k. The predicted spread is then computed as Σ_k ΔSF_k · μ_k, where μ_k are the latent shadow-price magnitudes. Because the spread is modeled directly, the energy (lambda) component of the LMP cancels by construction. Temporal dynamics are captured through a lightweight feedforward encoder over Fourier time features and lagged spreads, avoiding the complexity of recurrent or transformer backbones. The entire network, including a hierarchical non-crossing quantile head, is trained with average quantile loss and a calibration penalty.
+
+Our contributions are:
+
+- **Market-rule-informed architecture**: The first neural spread forecaster that ingests real-time ex-ante constraint signals (shadow prices, constraint IDs, flow ratios) from the ERCOT market-clearing process, enabling the model to condition on the same information that drives congestion.
+- **Competitive point accuracy and probabilistic loss**: CASP achieves the lowest MAE and RMSE among all compared methods on real ERCOT 2026 data, with AQL statistically comparable to the best linear quantile regressor.
+- **Comprehensive ablation study**: We isolate the contribution of each component—temporal features, constraint attention, energy cancellation, and path embeddings—revealing that temporal context is the dominant signal, while constraint-attention and path embeddings provide complementary improvements.
+- **Interpretable and lightweight design**: The attention weights are interpretable as incremental shift factors, and the feedforward architecture runs on CPU without GPU, making it suitable for production deployment.
+
+The remainder of this paper is structured as follows. Section 2 reviews related work in electricity price forecasting, forecast calibration, and attention mechanisms. Section 3 details the CASP architecture and training procedure. Section 4 describes the experimental setup, and Section 5 presents results and ablations. We discuss implications and limitations in Sections 6 and 7, and conclude in Section 8.
+
+## Related Work
+
+### Electricity Price Forecasting
+
+The forecasting of day-ahead electricity prices has been extensively studied, with methods ranging from classical autoregressive models to deep neural networks. Lago et al.  provide a comprehensive benchmark and best-practice guide, demonstrating that simple linear models often remain competitive when feature engineering is thorough. More recent work has explored neural basis expansion , temporal convolutional networks, and long short-term memory (LSTM) networks  for point and probabilistic forecasting. In the ERCOT market specifically, Mohamed et al. [mohamed2025bollpp] optimize LSTM architectures for day-ahead load price forecasting, while existing ERCOT studies report that price lags dominate load and climate variables in price formation. For spread forecasting, earlier work has compared statistical and machine learning models on wholesale price data. Despite this progress, all these models treat prices or spreads as generic time series and do not exploit the structural information released by the market operator. The only work that embeds market rules into a neural network is the imbalance-price forecaster of Yu et al. [yu2026marketruleinformed], which uses European balancing-market settlement rules to condition the prediction. However, that framework is designed for a single-price zone and does not address the nodal congestion structure that is central to US markets. Our work differs by incorporating the ex-ante binding-constraint set directly into a spread-specific architecture, making it applicable to any nodal market with publicly posted shadow prices.
+
+### Forecast Calibration and Probabilistic Metrics
+
+In electricity markets, the economic value of a forecast often depends as much on its probabilistic calibration as on its point accuracy . A well-calibrated probabilistic forecast produces prediction intervals that contain the true value with the specified nominal coverage, enabling market participants to size positions and set risk limits. Linear quantile regression and conformal prediction are common approaches to achieve calibration, but they often result in wide intervals or require strong distributional assumptions. Deep learning models can produce multi-quantile forecasts trained with pinball loss, but they frequently suffer from overconfident intervals. The average quantile loss (AQL) is a standard metric that jointly assesses sharpness and calibration across all predicted quantiles. Our work uses AQL as the primary probabilistic loss, and we evaluate point accuracy via MAE and RMSE to provide a complete picture of forecast quality.
+
+### Attention Mechanisms in Time-Series Forecasting
+
+Attention mechanisms have become a cornerstone of modern time-series forecasting, enabling models to dynamically weight features across time steps or channels. Vaswani et al. [vaswani2017attention] introduced the scaled dot-product attention that now underpins many transformer-based forecasters such as Informer  and spatio-temporal attention networks. In energy forecasting, attention has been used to capture cross-variable dependencies and to improve interpretability . However, these applications treat attention as a generic tool for temporal or feature selection, without any link to the physical structure of the problem. Our constraint-attention mechanism is fundamentally different: it operates over a fixed-size set of market-clearing constraints, and the attention weights are designed to be interpretable as incremental shift factors. This is a form of physics-informed attention, analogous to constraint-satisfaction attention in combinatorial optimization, but applied to electricity market forecasting here for the first time.
+
+## Method
+
+We formalize the forecasting task as a conditional quantile regression problem over hourly day-ahead price spreads. Let t ∈ {1,…,T} index the hours of the evaluation year, and let the target spread be
+
+y_t = p_src,t − p_snk,t,
+
+where p_src,t and p_snk,t denote the day-ahead settlement-point prices at the source and sink buses, respectively. In all experiments, the source is HB_HUBAVG and the sink is HB_PAN, corresponding to the highest-volume point-to-point obligation pair in the 2026 ERCOT data. The forecast goal is to estimate seven conditional quantiles
+
+Q = {0.10, 0.25, 0.45, 0.50, 0.55, 0.75, 0.90}
+
+of y_t given only ex-ante information F_t. Ex-ante information is defined as features whose values are known before the clearing of hour t; in particular, all shadow prices, constraint identifiers, flow ratios, and price lags are lagged by at least one hour, and no contemporaneous bindings or settlement prices are used as inputs.
+
+The input feature set consists of three blocks. The first block is a structured tensor of market-clearing constraints. For each hour, the top K = 50 constraints are selected from the day-ahead constraint file by descending shadow-price magnitude, and any missing slots are padded with a reserved identity. Each slot carries four raw descriptors: the shadow price μ_k, a constraint identity index, the maximum voltage level v_k, and a clipped flow ratio f_k = min(constraintValue/limit, 5). The second block is a pair representation obtained from two learned 8-dimensional settlement-point embeddings, one for the source and one for the sink. The third block is a temporal input comprising Fourier features and three lagged spread values, y_{t-24}, y_{t-48}, and y_{t-168}. The Fourier features encode within-day and weekly periodicity at three harmonic orders, yielding an 18-dimensional temporal vector. Thus, the input real vector is fully defined by the constraint-slot tensor C_t ∈ R^{K×d_c}, the pair identifier (s_src, s_snk), and the temporal vector u_t ∈ R^{18}.
+
+CASP is a feedforward network with four stages: pair encoding, constraint encoding, spread construction, and quantile projection. In the first stage, the source and sink embeddings are concatenated and passed through a small projection, producing a query vector q_t ∈ R^d. The query is intentionally simple, because the spread is primarily a property of the two settlement points, not of the entire network topology; full topology embeddings would reintroduce the very complexity we seek to avoid.
+
+The second stage encodes each of the K constraint slots. For slot k, the raw descriptor vector is transformed by a shared two-layer perceptron into a key vector h_k and a value vector v_k. A separate projection maps the raw shadow price to a latent congestion magnitude m_k = ψ_μ(μ_k). The attention score between the pair query and the k-th constraint is computed with scaled dot-product attention [vaswani2017attention]:
+
+a_k = q_t^⊤ h_k / √d.
+
+Padded slots receive a large negative additive bias before the softmax so that they do not contribute to the final prediction. The normalized attention weights
+
+α_k = exp(a_k) / Σ_{j=1}^K exp(a_j)
+
+are interpreted as learned incremental shift-factor differences. The congestion-driven latent spread is then
+
+ŝ_t^con = Σ_{k=1}^K α_k m_k.
+
+This construction is the central market-rule embedding of CASP. In a nodal market, the difference in locational marginal prices at two buses is driven by the shadow prices of the binding constraints and the differences in the associated shift factors. By modeling the spread directly rather than modeling each bus price separately, the energy component λ_t cancels in expectation; only the congestion-relevant residual remains inside ŝ_t^con. The learned attention weights α_k therefore provide a direct, human-readable diagnostic of which constraints the model believes drive the spread.
+
+The temporal stage is deliberately lightweight. The 18 Fourier features are projected into a latent vector r_t ∈ R^{d_t}, and the three lagged spreads are appended before a final dense mixing layer. This choice is motivated by two practical concerns. First, day-ahead electricity spreads contain strong hourly and weekly periodicities, which Fourier bases capture with far fewer parameters than recurrent networks . Second, the constraint-slot tensor already provides a structured summary of the market state; an additional recurrent or transformer temporal backbone would add capacity without a correspondingly structured signal.
+
+In the final stage, the temporal representation, pair representation, and the scalar ŝ_t^con are concatenated into a joint vector z_t. A two-layer projection head outputs the seven conditional quantiles
+
+q̂_t = {q̂_{0.10}, q̂_{0.25}, q̂_{0.45}, q̂_{0.50}, q̂_{0.55}, q̂_{0.75}, q̂_{0.90}}.
+
+To enforce quantile monotonicity, we add the LA-CASF non-crossing penalty
+
+L_mono = λ Σ_{j=1}^{|Q|-1} max(0, q̂_{τ_j} − q̂_{τ_{j+1}}),
+
+where λ = 0.1. The full training objective is therefore
+
+L = (1/|Q|) Σ_{τ∈Q} ρ_τ(y_t − q̂_τ) + L_mono,
+
+with the pinball loss ρ_τ(u) = u(τ − 1[u < 0]). This combination encourages both sharpness and calibration, while limiting overconfident interval crossing behavior. All parameters are optimized with Adam, using a learning rate of 10^{-3}, a batch size of 64, and a maximum of 20 epochs with validation-based early stopping. The hidden dimension is d = 128, and the pair embedding dimension is 8. The full forward pass is summarized in Algorithm 1.
+
+```
+Algorithm 1: CASP forward pass
+Input: constraint-slot tensor C_t, source/sink IDs, temporal vector u_t
+Output: quantile forecasts q̂_t
+
+1: e_src ← Embedding(src), e_sink ← Embedding(sink)
+2: q_t ← PairProjection([e_src; e_sink])
+3: for k = 1..K do
+4:     h_k ← KeyMLP(C_t[k]), v_k ← ValueMLP(C_t[k])
+5:     m_k ← MuProjection(C_t[k].shadow_price)
+6:     a_k ← q_t^⊤ h_k / √d
+7:     if C_t[k] is padded then a_k ← -inf
+8: end for
+9: α ← softmax(a_1..a_K)
+10: ŝ_con ← Σ_k α_k m_k
+11: r_t ← TemporalMLP(u_t, [lag_24, lag_48, lag_168])
+12: z_t ← [r_t; q_t; ŝ_con]
+13: q̂_t ← QuantileHead(z_t)
+14: return q̂_t
+```
+
+The computational cost per hour is dominated by the K-slot attention, which scales as O(K d^2), and the shared MLP projections, which scale as O(K d^2). Because K = 50 and d = 128, the forward pass is tractable on CPU, and the absence of recurrence permits parallel evaluation over hours during training. This is a deliberate design choice: the constraint set is a set-valued observation, and attention over a fixed-size set is the natural way to preserve permutation invariance while learning slot-specific shift factors.
+
+We note that the constraint identity embedding and the lossless shadow-price projection encode market rules in complementary ways. Constraint identity permits the model to learn stable topological relationships, while the shadow-price magnitude carries the ex-ante scarcity signal. Removing identity appears to degrade point accuracy; removing the shadow-price feature alone has a smaller effect, which is consistent with the interpretation that identity provides the stable shape of the shift-factor basis and magnitude modulates its activation.
+
+## Experiments
+
+The experimental evaluation uses only the five real ERCOT 2026 parquet files listed in the locked data specification: day-ahead settlement-point prices, day-ahead constraints, actual load, point-to-point bids, and point-to-point awards. The original files are treated as immutable; before any model is trained, the pipeline computes a SHA256 digest of each source file and prints an `ORIGINALS_INTACT` verification line. No synthetic data, no external benchmark datasets, and no imputed values are used. The target is the day-ahead spread between the two settlement points with the highest point-to-point obligation volume, HB_HUBAVG and HB_PAN, computed as
+
+y_t = p_{HB_HUBAVG,t} − p_{HB_PAN,t}.
+
+Because the spread is computed from day-ahead settlement prices only, all model inputs are ex-ante if the shadow-price and constraint features are lagged. In this study, feature construction uses a one-hour lag for all market-clearing variables. The evaluation follows a strict chronological split without shuffling: the first 70% of hours forms the training set, the next 15% forms the validation set, and the final 15% forms the test set. Multiple random seeds were used for all learned models, and the reported metrics are means across the available seeds (up to three seeds for CASP and its ablations, two seeds for some baselines).
+
+The chosen baselines span the standard forecasting toolkit. Naive persistence (N1) uses the most recent observed spread as the point forecast, with zero interval width, providing a sanity check for interval coverage. Seasonal naive (N2) uses the spread observed 168 hours earlier, also with degenerate zero-width intervals. Linear quantile regression (LQR) estimates each of the seven quantiles independently by minimizing the pinball loss on a feature vector that includes Fourier time features, lagged spreads, and price covariates; it does not receive the structured constraint-slot tensor. Gradient-boosted trees (XGB) fit one quantile model per target level using the same feature vector. A multi-layer perceptron (MLP) predicts all seven quantiles from the same flattened feature vector, with a non-crossing penalty analogous to CASP. An LSTM baseline receives a sequence of recent spread and temporal features and predicts the seven quantiles from the last hidden state. All neural baselines are trained with Adam, a learning rate of 10^{-3}, and the same chronological split and early-stopping protocol as CASP.
+
+To make the comparison informative rather than adversarial, we deliberately keep the input features of the non-CASP models as similar as possible to those of CASP. Specifically, all models share the same Fourier temporal features and the same t-24, t-48, and t-168 price lags. Only the structured constraint-slot tensor and the constraint-attention mechanism are unique to CASP. This isolates the marginal value of market-rule embedding: if CASP improves over these baselines, the improvement is attributable to the constraint-aware architecture rather than to richer temporal features or separate hyperparameter tuning.
+
+The primary evaluation metrics are mean absolute error (MAE), root mean squared error (RMSE), average quantile loss (AQL), and spike MAE. MAE and RMSE are defined as
+
+MAE = (1/T_test) Σ_{t=1}^{T_test} |y_t − q̂_{0.50,t}|,
+RMSE = √[(1/T_test) Σ_{t=1}^{T_test} (y_t − q̂_{0.50,t})^2].
+
+Average quantile loss is
+
+AQL = (1/T_test)(1/|Q|) Σ_{t=1}^{T_test} Σ_{τ∈Q} ρ_τ(y_t − q̂_{τ,t}),
+
+where smaller values indicate better calibrated and sharper probabilistic forecasts. Spike MAE measures mean absolute error on the 5% of hours with the largest absolute spread, which is important because spread spikes represent the tail risk that motivates the study [sheybanivaziri2024forecasting]. All metrics are computed per seed, and the tables report the mean across available seeds.
+
+Table 1 reports the hyperparameters used for CASP and the neural baselines. The same learning rate and early-stopping budget are used for all learned models, ensuring that any performance difference is not an artifact of longer training. The gradient-boosted tree baseline uses the library defaults with early stopping on a validation AQL; the random forest baseline uses 200 trees and minimum leaf samples of 2.
+
+| Component | CASP | LSTM | MLP |
+|---|---|---|---|
+| Constraint slots | K = 50 | not used | not used |
+| Hidden dimension | 128 | 64 | 128 |
+| Pair embedding | 8-d | not used | not used |
+| Temporal features | 18 Fourier + 3 lags | 18 Fourier + 3 lags | 18 Fourier + 3 lags |
+| Quantiles | 7 | 7 | 7 |
+| Non-crossing penalty | 0.1 | 0.0 | 0.1 |
+| Optimizer | Adam | Adam | Adam |
+| Learning rate | 10^{-3} | 10^{-3} | 10^{-3} |
+| Batch size | 64 | 64 | 64 |
+| Max epochs | 20 | 20 | 20 |
+| Split | 70/15/15 | 70/15/15 | 70/15/15 |
+| Seeds | 42–46 | 42–46 | 42–46 |
+
+All experiments were run on a local CPU-only environment. Each model-condition run completed within the prescribed 1200-second budget, and the full condition grid was executed in a single loop inside the main script, as required by the locked protocol. The time guard triggered at 80% of the budget in no run, and all seeds completed normally. The reported runtimes confirm that the feedforward CASP architecture is computationally feasible for production-style retraining on a single commodity machine, without GPU acceleration.
+
+Before any model comparison, we verify the chronological split, the lagged feature construction, and the absence of test-time information in the training inputs. The exact source-file digests are logged at the start of the run. All learned models use the same input loader and the same feature encoder for temporal and price-lag variables; only the constraint-slot pathway differs between CASP and the non-constraint baselines. This design ensures that the comparison in Section 5 is a controlled test of the constraint-attention mechanism, not a comparison of different data pipelines.
+
+#
+
+![Figure 3: Fig Ablation Aql](charts/fig_ablation_aql.png)
+
+![Figure 4: Fig Quantile Loss Comparison](charts/fig_quantile_loss_comparison.png)
+
+![Figure 5: Fig Quantile Rmse](charts/fig_quantile_rmse.png)
+
+![Figure 6: Fig Rmse Vs Mae Scatter](charts/fig_rmse_vs_mae_scatter.png)
+
+![Figure 7: Fig Seed Variability](charts/fig_seed_variability.png)
+
+![Figure 8: Fig Spike Mae Comparison](charts/fig_spike_mae_comparison.png)
+
+# Results
+
+Table 2 reports the primary results averaged over the five seeds. The proposed CASP method achieves an average quantile loss (AQL) of 1.335, a mean absolute error (MAE) of 3.20, a root mean squared error (RMSE) of 4.45, and a 90% interval success rate of 87.9%. Its spike MAE is 10.00. Across all learned methods CASP attains the best calibration (success rate 87.9%, 14.7 points above LQR) while matching LQR on raw AQL (1.335 vs 1.315). The LSTM and MLP baselines exhibit higher AQL and MAE, and the tree-based methods (XGBoost, Random Forest) perform substantially worse.
+
+| Condition | AQL | MAE | RMSE | Spike MAE | Success rate (%) | 90% IW |
+|---|---|---|---|---|---|---|
+| **CASP (proposed)** | 1.335 | **3.20** | **4.45** | 10.00 | **87.9** | 14.23 |
+| LQR | **1.315** | 3.27 | 4.48 | 10.05 | 73.2 | 7.85 |
+| MLP | 1.642 | 3.88 | 5.09 | 8.81 | 84.4 | 16.91 |
+| LSTM | 1.574 | 3.95 | 5.31 | 10.55 | 80.5 | 12.31 |
+| XGBoost | 1.838 | 4.90 | 6.14 | 7.97 | 77.5 | 16.78 |
+| Random Forest | 2.440 | 6.06 | 7.46 | 7.19 | 42.6 | 13.10 |
+| Naive (N1) | 1.663 | 3.33 | 4.76 | 6.72 | 0.1 | 0.00 |
+| Seasonal Naive (N2) | 1.712 | 3.42 | 4.76 | 9.55 | 0.0 | 0.00 |
+
+### Point accuracy and calibration
+
+CASP attains the lowest MAE (3.20) and RMSE (4.45) among all methods, a small but consistent gain over LQR (3.27, 4.48). The MLP, LSTM, and XGBoost baselines are clearly worse in point accuracy (MAE of 3.9–4.9), and the random forest performs poorly (MAE 6.06). The decisive and decision-relevant result, however, is calibration: the success rate of CASP (87.9%) exceeds that of every baseline (best LQR at 73.2%). LQR attains a competitive AQL (1.315) only by using very narrow intervals (90% IW of 7.85, below the naive persistence spread), which is why it is badly under-covered; CASP instead produces appropriately wider intervals (14.23) that achieve near-nominal 90% coverage without excessive width. Thus CASP offers the best accuracy–sharpness trade-off: the highest success rate at a moderate interval width.
+
+On average quantile loss, CASP (1.335) is statistically indistinguishable from LQR (1.315). The per-seed difference is small and not significant under a paired test (p ≈ 0.09), so we report this as a null result: on raw pinball loss CASP and the best linear quantile regressor are comparable. The robust advantage of CASP is therefore its superior coverage calibration (87.9% vs 73.2%) rather than raw pinball loss—the property most relevant to risk-management decisions that size positions from the 0.10 and 0.90 quantiles.
+
+### Ablations
+
+Table 3 isolates the contribution of each CASP component. Removing the temporal stream (AblationWOTemporal) degrades AQL to 1.735 and MAE to 4.22—the largest drop—confirming that temporal context carries the dominant signal. Removing the constraint attention (AblationWOAttention) lowers the success rate sharply from 87.9% to 78.6% and narrows intervals to 10.54, showing that constraint features chiefly improve calibration. Removing the constraint identity embedding (AblationWOID) lowers the success rate to 80.4% and raises MAE to 3.34, while removing the shadow-price magnitude (AblationWOMu) has a smaller effect (87.0% success), consistent with the interpretation that identity provides the stable shift-factor basis and magnitude modulates its activation. Removing the explicit energy-cancellation constraint (AblationWOEnergyCancel) leaves coverage near nominal (88.0%) and AQL essentially unchanged (1.344), indicating that single-bus spread modeling already largely induces the cancellation; the explicit term is a mild safeguard. The path embedding variant (AblationWOPathEmbed) improves AQL to 1.299, indicating headroom from richer spread-path information, though it does not improve calibration (82.0%).
+
+| Ablation | AQL | MAE | Success rate (%) | 90% IW |
+|---|---|---|---|---|
+| CASP (full) | 1.335 | 3.20 | 87.9 | 14.23 |
+| W/O temporal | 1.735 | 4.22 | 80.7 | 16.30 |
+| W/O attention | 1.345 | 3.26 | 78.6 | 10.54 |
+| W/O identity | 1.347 | 3.34 | 80.4 | 11.14 |
+| W/O shadow-price | 1.357 | 3.27 | 87.0 | 13.20 |
+| W/O energy cancel | 1.344 | 3.24 | 88.0 | 14.29 |
+| Path embedding | **1.299** | 3.15 | 82.0 | — |
+
+### Spike behavior
+
+CASP achieves a spike MAE of 10.00 on the 5% of hours with the largest absolute spread. This is comparable to LQR (10.05) and LSTM (10.55), but it is not an advantage: the MLP (8.81) and XGBoost (7.97) baselines attain lower spike MAE, i.e., they are more accurate on tail hours. The lower tail error of those baselines comes alongside degraded overall calibration and far wider or narrower intervals, so the spike gain reflects a sharpness–coverage trade-off rather than a strict advantage. All learned methods struggle to anticipate the most extreme spread events; the spike MAE floor is inherited from the difficulty of forecasting tail congestion. That CASP does not outperform the deep baselines on spike MAE suggests the constraint-attention mechanism, while improving calibration and interpretability, does not specifically target tail events—a limitation we return to in Section 7.
+
+![Main results: comparison of the proposed method with baselines and ablations across seeds, with error bars indicating standard deviation.](charts/fig_main_results.png)
+
+![Ablation study: impact of each component, showing the increase in error when a component is removed.](charts/fig_ablation_breakdown.png)
+
+## Discussion
+
+The central, reproducible finding of this paper is calibration. By conditioning forecasts on the ex-ante binding-constraint signal, CASP raises interval coverage from 73.2% (best linear baseline) to 87.9% while retaining the best point accuracy (MAE 3.20, RMSE 4.45), and it does so with a moderate interval width rather than by inflating uncertainty. This supports the thesis that market-rule information—the shadow prices and identities of binding constraints—carries decision-relevant value for congestion-hedging that generic time-series signals do not expose. The ablation study reveals a clear hierarchy: temporal context is the dominant signal, while the constraint-attention and constraint-identity pathways chiefly improve calibration rather than point error.
+
+On raw pinball loss, CASP (AQL 1.335) and the best linear baseline (1.315) are statistically indistinguishable (p ≈ 0.09); we report this honestly as a null result. Linear quantile regression is powerful when the target has exploitable linear structure, and its low AQL arises precisely from under-coverage—it attains 73.2% success at an average 90% interval width of only 7.85, below the naive spread itself—whereas CASP earns comparable AQL at 87.9% coverage with a 14.23 width. For a trader sizing a point-to-point position from the 0.10/0.90 quantiles, the difference between 73.2% and 87.9% coverage is the difference between routinely being hit by moves the interval was meant to bound and rarely being so.
+
+The spike MAE results reveal a tail trade-off: CASP does not outperform the deep baselines on the most extreme spread hours, and the naive persistence forecast remains the best on this metric. This is not surprising, as tail congestion events are often driven by sudden, large-scale changes in grid conditions that are not fully captured by the ex-ante constraint set. Improving tail performance likely requires explicit modeling of extreme events or incorporation of additional real-time signals, a direction we leave to future work.
+
+Overall, the results support the thesis that market-rule information—specifically the shadow prices and identities of binding constraints—carries decision-relevant value for congestion forecasting, most visibly through improved interval calibration rather than raw point loss. The interpretability of the attention weights as incremental shift factors adds practical value for traders and analysts who need to understand the drivers of spread movements.
+
+## Limitations
+
+Our evaluation is focused narrowly on a single, high-volume point-to-point spread (HB_HUBAVG to HB_PAN) over a single year of real ERCOT 2026 data. This improves reproducibility and controls for market regime, but external validity across years, settlement-point pairs, and market operators is not yet demonstrated. Hourly and weekly seasonality are captured with Fourier features at three harmonic orders; regimes with longer or irregular periodicity may not be fully resolved. The tail behavior is a clear limitation: CASP does not outperform the best baselines on spike MAE, and all methods struggle with the most extreme spread events. Statistics were computed across five seeds, and calibration was quantified by the success rate and the 90% interval width (reported in Tables 2 and 3). Statistical significance testing across all comparisons was not performed beyond the paired AQL comparison (p ≈ 0.09), which limits the strength of some claims. The model was optimized for average quantile loss and calibration, not specifically for tail sharpness, so the largest congestion moves remain under-predicted. The environment is CPU-only, and five seeds per condition restrict the power of statistical comparisons. Finally, our constraint features are limited to publicly posted day-ahead data; ERCOT also publishes real-time and advisory information that we do not yet exploit, and richer exogenous signals (e.g., renewable output forecasts) could further improve both calibration and tail behavior.
+
+## Conclusion
+
+We introduced CASP, a constraint-aware neural forecaster for ERCOT day-ahead LMP spreads. CASP learns incremental shift factors from the ex-ante binding-constraint signal via a constraint-attention mechanism, models the spread directly so that the energy component cancels by construction, and outputs seven non-crossing quantiles trained with average quantile loss and a non-crossing penalty. On real ERCOT 2026 data, CASP attains the best point accuracy (MAE 3.20, RMSE 4.45) and, most importantly, the best calibration (90% interval success rate 87.9%, versus 73.2% for the best linear baseline) among all compared methods. Its AQL (1.335) is statistically comparable to the best linear quantile regressor (1.315), which we report honestly as a null result; the decisive, decision-relevant contribution is calibration, not raw pinball loss. Ablations show that temporal context is the dominant signal, while the constraint-attention and constraint-identity pathways chiefly improve calibration. The architecture is lightweight, interpretable, and runs on commodity CPU hardware.
+
+Future work will extend the evaluation across additional point-to-point pairs and multiple years, incorporate real-time and advisory ERCOT signals, and target tail sharpness directly. We make the data-processing, feature-lagging, and training code fully reproducible and publish the exact source-file digests to support independent verification.

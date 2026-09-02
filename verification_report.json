@@ -1,0 +1,102 @@
+{
+  "summary": {
+    "total": 10,
+    "verified": 10,
+    "suspicious": 0,
+    "hallucinated": 0,
+    "skipped": 0,
+    "integrity_score": 1.0
+  },
+  "results": [
+    {
+      "cite_key": "yu2026marketruleinformed",
+      "title": "A Market-Rule-Informed Neural Network for Efficient Imbalance Electricity Price Forecasting",
+      "status": "verified",
+      "confidence": 1.0,
+      "method": "openalex",
+      "details": "Confirmed via OpenAlex: 'A Market-Rule-Informed Neural Network for Efficient Imbalance Electricity Price Forecasting'",
+      "relevance_score": 1.0
+    },
+    {
+      "cite_key": "lago2020forecasting",
+      "title": "Forecasting day-ahead electricity prices: A review of state-of-the-art algorithms, best practices and an open-access benchmark",
+      "status": "verified",
+      "confidence": 1.0,
+      "method": "doi",
+      "details": "Confirmed via CrossRef: 'Forecasting day-ahead electricity prices: A review of state-of-the-art algorithms, best practices and an open-access benchmark'",
+      "relevance_score": 0.3
+    },
+    {
+      "cite_key": "hewamalage2020recurrent",
+      "title": "Recurrent Neural Networks for Time Series Forecasting: Current status and future directions",
+      "status": "verified",
+      "confidence": 1.0,
+      "method": "doi",
+      "details": "Confirmed via CrossRef: 'Recurrent Neural Networks for Time Series Forecasting: Current status and future directions'",
+      "relevance_score": 0.2
+    },
+    {
+      "cite_key": "mohamed2025bollpp",
+      "title": "BOL-LPP: A Bayesian-Optimized LSTM Model for Day-Ahead Load Price Forecasting in the ERCOT Market",
+      "status": "verified",
+      "confidence": 1.0,
+      "method": "doi",
+      "details": "Confirmed via CrossRef: 'BOL-LPP: A Bayesian-Optimized LSTM Model for Day-Ahead Load Price Forecasting in the ERCOT Market'",
+      "relevance_score": 0.6
+    },
+    {
+      "cite_key": "olivares2022neural",
+      "title": "Neural basis expansion analysis with exogenous variables: Forecasting electricity prices with NBEATSx",
+      "status": "verified",
+      "confidence": 1.0,
+      "method": "doi",
+      "details": "Confirmed via CrossRef: 'Neural basis expansion analysis with exogenous variables: Forecasting electricity prices with NBEATSx'",
+      "relevance_score": 0.4
+    },
+    {
+      "cite_key": "sheybanivaziri2024forecasting",
+      "title": "Forecasting price spikes in day-ahead electricity markets: techniques, challenges, and the road ahead",
+      "status": "verified",
+      "confidence": 1.0,
+      "method": "doi",
+      "details": "Confirmed via CrossRef: 'Forecasting price spikes in day-ahead electricity markets: techniques, challenges, and the road ahead'",
+      "relevance_score": 0.8
+    },
+    {
+      "cite_key": "zyl2023harnessing",
+      "title": "Harnessing eXplainable artificial intelligence for feature selection in time series energy forecasting: A comparative analysis of Grad-CAM and SHAP",
+      "status": "verified",
+      "confidence": 1.0,
+      "method": "doi",
+      "details": "Confirmed via CrossRef: 'Harnessing eXplainable artificial intelligence for feature selection in time series energy forecasting: A comparative analysis of Grad-CAM and SHAP'",
+      "relevance_score": 0.1
+    },
+    {
+      "cite_key": "vaswani2017attention",
+      "title": "Attention is all you need",
+      "status": "verified",
+      "confidence": 1.0,
+      "method": "openalex",
+      "details": "Confirmed via OpenAlex: 'Attention Is All You Need'",
+      "relevance_score": 0.5
+    },
+    {
+      "cite_key": "zhou2021informer",
+      "title": "Informer: Beyond Efficient Transformer for Long Sequence Time-Series Forecasting",
+      "status": "verified",
+      "confidence": 1.0,
+      "method": "doi",
+      "details": "Confirmed via CrossRef: 'Informer: Beyond Efficient Transformer for Long Sequence Time-Series Forecasting'",
+      "relevance_score": 0.3
+    },
+    {
+      "cite_key": "abdar2021review",
+      "title": "A review of uncertainty quantification in deep learning: Techniques, applications and challenges",
+      "status": "verified",
+      "confidence": 1.0,
+      "method": "doi",
+      "details": "Confirmed via CrossRef: 'A review of uncertainty quantification in deep learning: Techniques, applications and challenges'",
+      "relevance_score": 0.1
+    }
+  ]
+}

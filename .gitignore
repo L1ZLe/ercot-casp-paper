@@ -1,0 +1,14 @@
+# LaTeX build artifacts
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# OS
+.DS_Store
