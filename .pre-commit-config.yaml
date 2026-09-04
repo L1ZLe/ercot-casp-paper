@@ -1,0 +1,65 @@
+# Pre-commit hooks. See AGENTS.md for the conventions these hooks enforce.
+#
+# Install once:
+#   pip install pre-commit
+#   pre-commit install
+#   pre-commit install --hook-type commit-msg
+#
+# Run manually on all files:
+#   pre-commit run --all-files
+
+repos:
+  # Basic file hygiene
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: \.svg$|\.pth$|\.ipynb$
+      - id: end-of-file-fixer
+        exclude: \.svg$|\.ipynb$|\.pth$
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ['--maxkb=10000']
+      - id: check-merge-conflict
+
+  # Python lint + format
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.4
+    hooks:
+      - id: ruff
+        args: ['--fix']
+      - id: ruff-format
+
+  # Markdown link integrity — enforces AGENTS.md §"Cross-references"
+  # NOTE: the official pre-commit source is the lychee BINARY repo (lycheeverse/lychee),
+  # NOT lychee-action (that is the GitHub Actions project and ships no pre-commit hook).
+  - repo: https://github.com/lycheeverse/lychee
+    rev: 'v0.15.1'
+    hooks:
+      - id: lychee
+        args:
+          - '--no-progress'
+          - '--include-fragments'
+          - '--exclude-path=.venv'
+          - '--exclude-path=node_modules'
+          - '--exclude-path=models'
+        # init-agent.md is a reusable bootstrap SEED (not this repo's docs) and
+        # legitimately references a root TODO.md layout that other repos use.
+        exclude: ^init-agent\.md$
+        files: \.(md|ipynb)$
+
+  # Commit message format — enforces AGENTS.md §"Commits (Conventional Commits)"
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v3.6.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        args:
+          - feat
+          - fix
+          - docs
+          - chore
+          - refactor
+          - test
+          - perf
+          - build

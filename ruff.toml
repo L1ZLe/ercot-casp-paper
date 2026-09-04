@@ -1,0 +1,19 @@
+# Ruff configuration — keeps the AGENTS.md lint standard.
+#
+# No explicit `select` is set: ruff's default rule set applies repo-wide, so the
+# framework does not silently expand lint noise. The exceptions below are the
+# ONLY scope reduction, for pre-existing experiment code. Legacy debt is tracked
+# in docs/reference/tasks_infrastructure.md (TODO-17); do NOT grow these lists —
+# shrink them as the code is cleaned up.
+#
+# (New code such as config.py stays fully strict under ruff's defaults.)
+
+[lint.per-file-ignores]
+# ---- Pre-existing experiment code (predates the hygiene framework, 2026-09-03) ----
+# F841: unused shape-size locals (B/K = x.size(0)/x.size(1)) left over during dev.
+# E722 / BLE001 / S110: deliberate defensive blind-except fallbacks in scientific
+# statistical-test / memory-cleanup code. Both debts are tracked as TODO-17.
+"code/models.py" = ["F841"]
+"code/main.py" = ["F841", "E722", "BLE001", "S110"]
+"code/data.py" = ["S110", "BLE001"]
+"code/build_results.py" = ["BLE001"]
