@@ -2,18 +2,23 @@
 Model implementations for ERCOT day-ahead LMP spread forecasting.
 Fixed: proper XGBoost/RF baselines, LSTM with sequences, path embeddings.
 """
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
+
+import warnings
+
 import numpy as np
+import torch
+import torch.nn.functional as F
 import xgboost as xgb
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import StandardScaler
-import warnings
-warnings.filterwarnings('ignore')
+from torch import nn
+
+warnings.filterwarnings("ignore")
+
 
 class AverageQuantileLoss(nn.Module):
     """Average quantile loss over multiple quantile levels."""
+
     def __init__(self, quantiles):
         super().__init__()
         self.quantiles = quantiles
@@ -25,8 +30,10 @@ class AverageQuantileLoss(nn.Module):
         loss = torch.max(q_tensor * errors, (q_tensor - 1) * errors)
         return loss.mean()
 
+
 class LACASFPenalty(nn.Module):
     """LA-CASF non-crossing quantile penalty."""
+
     def __init__(self):
         super().__init__()
 
@@ -35,8 +42,10 @@ class LACASFPenalty(nn.Module):
         penalty = F.relu(-diff)
         return penalty.mean()
 
+
 class BaseModel(nn.Module):
     """Base model with shared components."""
+
     def __init__(self, config):
         super().__init__()
         self.config = config
@@ -48,18 +57,16 @@ class BaseModel(nn.Module):
         self.quantiles = config.quantiles
 
         # Constraint ID embedding
-        self.constraint_id_embed = nn.Embedding(config.num_constraint_ids + 1, 4, padding_idx=0)
+        self.constraint_id_embed = nn.Embedding(
+            config.num_constraint_ids + 1, 4, padding_idx=0
+        )
 
         # Slot encoder: input dim = 4 (shadow_price, cid_idx, kv_level, flow_ratio)
-        self.slot_encoder = nn.Sequential(
-            nn.Linear(4, self.slot_feat_dim),
-            nn.ReLU()
-        )
+        self.slot_encoder = nn.Sequential(nn.Linear(4, self.slot_feat_dim), nn.ReLU())
 
         # Temporal encoder
         self.temporal_encoder = nn.Sequential(
-            nn.Linear(config.temporal_emb_dim, self.temporal_emb_dim),
-            nn.ReLU()
+            nn.Linear(config.temporal_emb_dim, self.temporal_emb_dim), nn.ReLU()
         )
 
         # Path embedding (learned from path_id)
@@ -70,7 +77,7 @@ class BaseModel(nn.Module):
         self.quantile_head = nn.Sequential(
             nn.Linear(combined_dim, self.hidden_dim),
             nn.ReLU(),
-            nn.Linear(self.hidden_dim, self.num_quantiles)
+            nn.Linear(self.hidden_dim, self.num_quantiles),
         )
 
         # Losses
@@ -85,17 +92,19 @@ class BaseModel(nn.Module):
     def forward(self, batch):
         raise NotImplementedError
 
+
 class ProposedMethod(BaseModel):
     """Full constraint-attention model with learned Delta-SF and energy-cancel."""
+
     def __init__(self, config):
         super().__init__(config)
         self.source_sink_proj = nn.Linear(self.path_emb_dim, self.slot_feat_dim)
         self.latent_mu_linear = nn.Linear(self.slot_feat_dim, 1)
 
     def forward(self, batch):
-        slot_features = batch['slot_features']  # [B, K, 4]
-        temporal_features = batch['temporal_features']  # [B, 18]
-        path_id = batch['path_id']  # [B]
+        slot_features = batch["slot_features"]  # [B, K, 4]
+        temporal_features = batch["temporal_features"]  # [B, 18]
+        path_id = batch["path_id"]  # [B]
         B = slot_features.size(0)
         K = slot_features.size(1)
 
@@ -107,7 +116,9 @@ class ProposedMethod(BaseModel):
         keys = x_slots
         values = x_slots
 
-        attn_scores = torch.bmm(query, keys.transpose(1, 2)) / np.sqrt(self.slot_feat_dim)
+        attn_scores = torch.bmm(query, keys.transpose(1, 2)) / np.sqrt(
+            self.slot_feat_dim
+        )
         attn_weights = F.softmax(attn_scores, dim=-1)  # [B, 1, K]
 
         mu_k = self.latent_mu_linear(values).squeeze(-1)  # [B, K]
@@ -118,6 +129,7 @@ class ProposedMethod(BaseModel):
         quantiles = self.quantile_head(combined)
         return quantiles
 
+
 # Ablation models (similar fixes for path embeddings)
 class AblationWOMu(BaseModel):
     def __init__(self, config):
@@ -125,9 +137,9 @@ class AblationWOMu(BaseModel):
         self.source_sink_proj = nn.Linear(self.path_emb_dim, self.slot_feat_dim)
 
     def forward(self, batch):
-        slot_features = batch['slot_features']
-        temporal_features = batch['temporal_features']
-        path_id = batch['path_id']
+        slot_features = batch["slot_features"]
+        temporal_features = batch["temporal_features"]
+        path_id = batch["path_id"]
         B = slot_features.size(0)
         K = slot_features.size(1)
 
@@ -139,7 +151,9 @@ class AblationWOMu(BaseModel):
         keys = x_slots
         values = x_slots
 
-        attn_scores = torch.bmm(query, keys.transpose(1, 2)) / np.sqrt(self.slot_feat_dim)
+        attn_scores = torch.bmm(query, keys.transpose(1, 2)) / np.sqrt(
+            self.slot_feat_dim
+        )
         attn_weights = F.softmax(attn_scores, dim=-1)
 
         mu_k = torch.ones_like(attn_weights.squeeze(1))
@@ -150,20 +164,18 @@ class AblationWOMu(BaseModel):
         quantiles = self.quantile_head(combined)
         return quantiles
 
+
 class AblationWOID(BaseModel):
     def __init__(self, config):
         super().__init__(config)
-        self.slot_encoder = nn.Sequential(
-            nn.Linear(3, self.slot_feat_dim),
-            nn.ReLU()
-        )
+        self.slot_encoder = nn.Sequential(nn.Linear(3, self.slot_feat_dim), nn.ReLU())
         self.source_sink_proj = nn.Linear(self.path_emb_dim, self.slot_feat_dim)
         self.latent_mu_linear = nn.Linear(self.slot_feat_dim, 1)
 
     def forward(self, batch):
-        slot_features = batch['slot_features']
-        temporal_features = batch['temporal_features']
-        path_id = batch['path_id']
+        slot_features = batch["slot_features"]
+        temporal_features = batch["temporal_features"]
+        path_id = batch["path_id"]
         B = slot_features.size(0)
         K = slot_features.size(1)
 
@@ -176,7 +188,9 @@ class AblationWOID(BaseModel):
         keys = x_slots
         values = x_slots
 
-        attn_scores = torch.bmm(query, keys.transpose(1, 2)) / np.sqrt(self.slot_feat_dim)
+        attn_scores = torch.bmm(query, keys.transpose(1, 2)) / np.sqrt(
+            self.slot_feat_dim
+        )
         attn_weights = F.softmax(attn_scores, dim=-1)
 
         mu_k = self.latent_mu_linear(values).squeeze(-1)
@@ -187,6 +201,7 @@ class AblationWOID(BaseModel):
         quantiles = self.quantile_head(combined)
         return quantiles
 
+
 class AblationWOTemporal(BaseModel):
     def __init__(self, config):
         super().__init__(config)
@@ -196,12 +211,12 @@ class AblationWOTemporal(BaseModel):
         self.quantile_head = nn.Sequential(
             nn.Linear(combined_dim, self.hidden_dim),
             nn.ReLU(),
-            nn.Linear(self.hidden_dim, self.num_quantiles)
+            nn.Linear(self.hidden_dim, self.num_quantiles),
         )
 
     def forward(self, batch):
-        slot_features = batch['slot_features']
-        path_id = batch['path_id']
+        slot_features = batch["slot_features"]
+        path_id = batch["path_id"]
         B = slot_features.size(0)
         K = slot_features.size(1)
 
@@ -212,7 +227,9 @@ class AblationWOTemporal(BaseModel):
         keys = x_slots
         values = x_slots
 
-        attn_scores = torch.bmm(query, keys.transpose(1, 2)) / np.sqrt(self.slot_feat_dim)
+        attn_scores = torch.bmm(query, keys.transpose(1, 2)) / np.sqrt(
+            self.slot_feat_dim
+        )
         attn_weights = F.softmax(attn_scores, dim=-1)
 
         mu_k = self.latent_mu_linear(values).squeeze(-1)
@@ -223,6 +240,7 @@ class AblationWOTemporal(BaseModel):
         quantiles = self.quantile_head(combined)
         return quantiles
 
+
 class AblationWOPathEmbed(BaseModel):
     def __init__(self, config):
         super().__init__(config)
@@ -230,8 +248,8 @@ class AblationWOPathEmbed(BaseModel):
         self.latent_mu_linear = nn.Linear(self.slot_feat_dim, 1)
 
     def forward(self, batch):
-        slot_features = batch['slot_features']
-        temporal_features = batch['temporal_features']
+        slot_features = batch["slot_features"]
+        temporal_features = batch["temporal_features"]
         B = slot_features.size(0)
         K = slot_features.size(1)
 
@@ -243,7 +261,9 @@ class AblationWOPathEmbed(BaseModel):
         keys = x_slots
         values = x_slots
 
-        attn_scores = torch.bmm(query, keys.transpose(1, 2)) / np.sqrt(self.slot_feat_dim)
+        attn_scores = torch.bmm(query, keys.transpose(1, 2)) / np.sqrt(
+            self.slot_feat_dim
+        )
         attn_weights = F.softmax(attn_scores, dim=-1)
 
         mu_k = self.latent_mu_linear(values).squeeze(-1)
@@ -254,15 +274,16 @@ class AblationWOPathEmbed(BaseModel):
         quantiles = self.quantile_head(combined)
         return quantiles
 
+
 class AblationWOAttention(BaseModel):
     def __init__(self, config):
         super().__init__(config)
         self.latent_mu_linear = nn.Linear(self.slot_feat_dim, 1)
 
     def forward(self, batch):
-        slot_features = batch['slot_features']
-        temporal_features = batch['temporal_features']
-        path_id = batch['path_id']
+        slot_features = batch["slot_features"]
+        temporal_features = batch["temporal_features"]
+        path_id = batch["path_id"]
         B = slot_features.size(0)
         K = slot_features.size(1)
 
@@ -279,6 +300,7 @@ class AblationWOAttention(BaseModel):
         quantiles = self.quantile_head(combined)
         return quantiles
 
+
 class AblationWOEnergyCancel(BaseModel):
     def __init__(self, config):
         super().__init__(config)
@@ -287,9 +309,9 @@ class AblationWOEnergyCancel(BaseModel):
         self.energy_predictor = nn.Linear(self.path_emb_dim + self.temporal_emb_dim, 1)
 
     def forward(self, batch):
-        slot_features = batch['slot_features']
-        temporal_features = batch['temporal_features']
-        path_id = batch['path_id']
+        slot_features = batch["slot_features"]
+        temporal_features = batch["temporal_features"]
+        path_id = batch["path_id"]
         B = slot_features.size(0)
         K = slot_features.size(1)
 
@@ -301,7 +323,9 @@ class AblationWOEnergyCancel(BaseModel):
         keys = x_slots
         values = x_slots
 
-        attn_scores = torch.bmm(query, keys.transpose(1, 2)) / np.sqrt(self.slot_feat_dim)
+        attn_scores = torch.bmm(query, keys.transpose(1, 2)) / np.sqrt(
+            self.slot_feat_dim
+        )
         attn_weights = F.softmax(attn_scores, dim=-1)
 
         mu_k = self.latent_mu_linear(values).squeeze(-1)
@@ -316,18 +340,20 @@ class AblationWOEnergyCancel(BaseModel):
         quantiles = self.quantile_head(combined)
         return quantiles
 
+
 # Naive baselines using explicit lags
 class BaselineNaive1(nn.Module):
     """Non-parametric naive baseline: persistence — repeat the 24h lag spread
     as a flat spread across all quantiles. No trainable params (evaluated
     directly, never trained/backwarded)."""
+
     def __init__(self, config):
         super().__init__()
         self.config = config
         self.num_quantiles = config.num_quantiles
 
     def forward(self, batch):
-        lags = batch['lags']  # [B, num_lags]
+        lags = batch["lags"]  # [B, num_lags]
         lag_24 = lags[:, 0:1]
         return lag_24.expand(-1, self.num_quantiles)
 
@@ -343,13 +369,14 @@ class BaselineNaive1(nn.Module):
 class BaselineNaive2(nn.Module):
     """Non-parametric naive baseline: repeat the mean spread across the
     lookback lags. No trainable params (evaluated directly, never trained)."""
+
     def __init__(self, config):
         super().__init__()
         self.config = config
         self.num_quantiles = config.num_quantiles
 
     def forward(self, batch):
-        lags = batch['lags']  # [B, num_lags]
+        lags = batch["lags"]  # [B, num_lags]
         spread_mean = lags.mean(dim=-1, keepdim=True)
         return spread_mean.expand(-1, self.num_quantiles)
 
@@ -359,6 +386,7 @@ class BaselineNaive2(nn.Module):
         q = torch.tensor(self.config.quantiles, device=pred.device).view(1, -1)
         loss = torch.max(q * errors, (q - 1) * errors)
         return loss.mean().detach()
+
 
 class BaselineLQR(BaseModel):
     def __init__(self, config):
@@ -370,9 +398,9 @@ class BaselineLQR(BaseModel):
         )
 
     def forward(self, batch):
-        slot_features = batch['slot_features']
-        temporal_features = batch['temporal_features']
-        path_id = batch['path_id']
+        slot_features = batch["slot_features"]
+        temporal_features = batch["temporal_features"]
+        path_id = batch["path_id"]
 
         x_slots = self.slot_encoder(slot_features)
         x_path = self.path_embedding(path_id)
@@ -383,36 +411,39 @@ class BaselineLQR(BaseModel):
         quantiles = self.linear_head(combined)
         return quantiles
 
+
 class BaselineMLP(BaseModel):
     def __init__(self, config):
         super().__init__(config)
-        flat_dim = config.K_slots * config.slot_feat_dim + config.temporal_emb_dim + config.path_emb_dim
+        flat_dim = (
+            config.K_slots * config.slot_feat_dim
+            + config.temporal_emb_dim
+            + config.path_emb_dim
+        )
         self.mlp = nn.Sequential(
             nn.Linear(flat_dim, config.hidden_dim),
             nn.ReLU(),
-            nn.Linear(config.hidden_dim, config.num_quantiles)
+            nn.Linear(config.hidden_dim, config.num_quantiles),
         )
 
     def forward(self, batch):
-        slot_features = batch['slot_features']
-        temporal_features = batch['temporal_features']
-        path_id = batch['path_id']
+        slot_features = batch["slot_features"]
+        temporal_features = batch["temporal_features"]
+        path_id = batch["path_id"]
 
         B = slot_features.size(0)
         x_slots = self.slot_encoder(slot_features)
         x_path = self.path_embedding(path_id)
         x_temporal = self.temporal_encoder(temporal_features)
 
-        flat = torch.cat([
-            x_slots.reshape(B, -1),
-            x_path,
-            x_temporal
-        ], dim=-1)
+        flat = torch.cat([x_slots.reshape(B, -1), x_path, x_temporal], dim=-1)
         quantiles = self.mlp(flat)
         return quantiles
 
+
 class BaselineLSTM(BaseModel):
     """LSTM over sequence of hourly data."""
+
     def __init__(self, config):
         super().__init__(config)
         self.lstm_hidden = 64
@@ -424,9 +455,9 @@ class BaselineLSTM(BaseModel):
 
     def forward(self, batch):
         # Expects batch with sequence fields
-        slot_seq = batch['slot_sequence']  # [B, L, K, 4]
-        temporal_seq = batch['temporal_sequence']  # [B, L, 18]
-        path_id_seq = batch['path_id_sequence']  # [B, L]
+        slot_seq = batch["slot_sequence"]  # [B, L, K, 4]
+        temporal_seq = batch["temporal_sequence"]  # [B, L, 18]
+        path_id_seq = batch["path_id_sequence"]  # [B, L]
         B, L = slot_seq.size(0), slot_seq.size(1)
 
         # Encode each timestep
@@ -442,9 +473,11 @@ class BaselineLSTM(BaseModel):
         quantiles = self.head(lstm_out[:, -1, :])  # [B, num_quantiles]
         return quantiles
 
+
 # XGBoost baseline (non-PyTorch)
 class BaselineXGBoost:
     """XGBoost quantile regression baseline. Trained separately."""
+
     def __init__(self, config, quantiles):
         self.config = config
         self.quantiles = quantiles
@@ -454,13 +487,13 @@ class BaselineXGBoost:
 
     def _extract_features(self, batch):
         # Flatten all features into a vector
-        slot_features = batch['slot_features'].cpu().numpy()  # [B, K, 4]
-        temporal_features = batch['temporal_features'].cpu().numpy()  # [B, 18]
-        path_id = batch['path_id'].cpu().numpy()  # [B]
+        slot_features = batch["slot_features"].cpu().numpy()  # [B, K, 4]
+        temporal_features = batch["temporal_features"].cpu().numpy()  # [B, 18]
+        path_id = batch["path_id"].cpu().numpy()  # [B]
         B = slot_features.shape[0]
         K = slot_features.shape[1]
         # Flatten slots
-        slot_flat = slot_features.reshape(B, K*4)
+        slot_flat = slot_features.reshape(B, K * 4)
         # One-hot path_id? For simplicity, treat as integer feature
         path_feat = path_id.reshape(-1, 1)
         X = np.concatenate([slot_flat, temporal_features, path_feat], axis=1)
@@ -472,7 +505,7 @@ class BaselineXGBoost:
         y_list = []
         for batch in train_loader:
             X = self._extract_features(batch)
-            y = batch['target'].cpu().numpy().ravel()
+            y = batch["target"].cpu().numpy().ravel()
             X_list.append(X)
             y_list.append(y)
         X_train = np.vstack(X_list)
@@ -483,12 +516,12 @@ class BaselineXGBoost:
         self.models = []
         for q in self.quantiles:
             model = xgb.XGBRegressor(
-                objective='reg:quantileerror',
+                objective="reg:quantileerror",
                 quantile_alpha=q,
                 n_estimators=100,
                 max_depth=6,
                 learning_rate=0.1,
-                random_state=42
+                random_state=42,
             )
             model.fit(X_train, y_train)
             self.models.append(model)
@@ -509,18 +542,20 @@ class BaselineXGBoost:
         all_preds = self.predict(test_loader)
         all_targets = []
         for batch in test_loader:
-            all_targets.append(batch['target'].cpu().numpy().ravel())
+            all_targets.append(batch["target"].cpu().numpy().ravel())
         all_targets = np.concatenate(all_targets)
         # Compute quantile loss
         loss = 0.0
         for i, q in enumerate(self.quantiles):
             errors = all_targets - all_preds[:, i]
-            loss += np.mean(np.maximum(q * errors, (q-1) * errors))
+            loss += np.mean(np.maximum(q * errors, (q - 1) * errors))
         return loss / len(self.quantiles)
+
 
 # Random Forest baseline (non-PyTorch)
 class BaselineRF:
     """Random Forest quantile regression baseline."""
+
     def __init__(self, config, quantiles):
         self.config = config
         self.quantiles = quantiles
@@ -529,12 +564,12 @@ class BaselineRF:
         self.is_fitted = False
 
     def _extract_features(self, batch):
-        slot_features = batch['slot_features'].cpu().numpy()
-        temporal_features = batch['temporal_features'].cpu().numpy()
-        path_id = batch['path_id'].cpu().numpy()
+        slot_features = batch["slot_features"].cpu().numpy()
+        temporal_features = batch["temporal_features"].cpu().numpy()
+        path_id = batch["path_id"].cpu().numpy()
         B = slot_features.shape[0]
         K = slot_features.shape[1]
-        slot_flat = slot_features.reshape(B, K*4)
+        slot_flat = slot_features.reshape(B, K * 4)
         path_feat = path_id.reshape(-1, 1)
         X = np.concatenate([slot_flat, temporal_features, path_feat], axis=1)
         return X
@@ -544,7 +579,7 @@ class BaselineRF:
         y_list = []
         for batch in train_loader:
             X = self._extract_features(batch)
-            y = batch['target'].cpu().numpy().ravel()
+            y = batch["target"].cpu().numpy().ravel()
             X_list.append(X)
             y_list.append(y)
         X_train = np.vstack(X_list)
@@ -568,9 +603,13 @@ class BaselineRF:
             X = self._extract_features(batch)
             X = self.scaler.transform(X)
             # Get predictions from all trees
-            tree_preds = np.array([tree.predict(X) for tree in self.rf.estimators_])  # [n_trees, B]
+            tree_preds = np.array(
+                [tree.predict(X) for tree in self.rf.estimators_]
+            )  # [n_trees, B]
             # Compute quantiles across trees
-            batch_preds = np.percentile(tree_preds, [q*100 for q in self.quantiles], axis=0).T  # [B, Q]
+            batch_preds = np.percentile(
+                tree_preds, [q * 100 for q in self.quantiles], axis=0
+            ).T  # [B, Q]
             preds.append(batch_preds)
         return np.vstack(preds)
 
@@ -578,10 +617,10 @@ class BaselineRF:
         all_preds = self.predict(test_loader)
         all_targets = []
         for batch in test_loader:
-            all_targets.append(batch['target'].cpu().numpy().ravel())
+            all_targets.append(batch["target"].cpu().numpy().ravel())
         all_targets = np.concatenate(all_targets)
         loss = 0.0
         for i, q in enumerate(self.quantiles):
             errors = all_targets - all_preds[:, i]
-            loss += np.mean(np.maximum(q * errors, (q-1) * errors))
+            loss += np.mean(np.maximum(q * errors, (q - 1) * errors))
         return loss / len(self.quantiles)

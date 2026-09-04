@@ -1,0 +1,7 @@
+{
+  "ercot_dam_prices_2026.parquet": "cd231c46d381aa4e433636ed724f45135070d2b0f750f839c991b486abf439f6",
+  "ercot_dam_constraints_2026.parquet": "000754abb92891d46927e0178f55ad07979fa13ab86dfacae2b918ee511709e9",
+  "ercot_actual_load_2026.parquet": "66910067ff54b1fcf1efe4d3d94c0f9fcaef9a946c4d78c030a6dca4174932f1",
+  "ercot_ptp_bids_2026.parquet": "d8a0f61debed870a36866f8888bfdd4b6b09c7c9c1c3dcb19e2ad2dbb6541049",
+  "ercot_ptp_awards_2026.parquet": "fddf539c6a7046f1392afcd20b6b6e2527d78404722be7184e20e3113a4ff128"
+}
