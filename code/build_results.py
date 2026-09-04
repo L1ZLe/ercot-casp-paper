@@ -201,6 +201,62 @@ def load_per_seed(results_dir, method_list, pair=None):
     return block
 
 
+# -------------------------------------------------------------- M6: efficiency
+def count_params(method_name, config):
+    """Trainable parameter count for a torch method (M6, ADR-0006).
+    Non-torch / non-parametric methods return 0."""
+    import models as M
+
+    registry = {
+        "ProposedMethod": M.ProposedMethod,
+        "AblationWOMu": M.AblationWOMu,
+        "AblationWOID": M.AblationWOID,
+        "AblationWOTemporal": M.AblationWOTemporal,
+        "AblationWOPathEmbed": M.AblationWOPathEmbed,
+        "AblationWOAttention": M.AblationWOAttention,
+        "AblationWOEnergyCancel": M.AblationWOEnergyCancel,
+        "BaselineMLP": M.BaselineMLP,
+        "BaselineLSTM": M.BaselineLSTM,
+        "BaselineTransformer": M.BaselineTransformer,
+    }
+    cls = registry.get(method_name)
+    if cls is None:
+        return 0
+    model = cls(config)
+    return int(sum(pp.numel() for pp in model.parameters() if pp.requires_grad))
+
+
+# ----------------------------------------------------------- M8: conformal CQR
+def split_conformal(pred, target, quantiles, alpha=0.10, cal_frac=0.5):
+    """Split-conformal widening of the 0.10/0.90 band (M8, ADR-0007).
+
+    Uses the saved LQR per-seed predictions to answer the reviewer question:
+    can LQR + a conformal wrap reach ~90% coverage, and at what width?
+    pred: [N, Q]; target: [N]. Returns corrected coverage + width on the
+    non-calibration half.
+    """
+    lo_i, up_i = quantiles.index(0.10), quantiles.index(0.90)
+    n = len(target)
+    k = int(n * cal_frac)
+    cal_lo, cal_up = pred[:k, lo_i], pred[:k, up_i]
+    cal_y = target[:k]
+    # signed non-conformity: how far the true value sits outside the raw band
+    score = np.maximum(cal_lo - cal_y, cal_y - cal_up)
+    qcorr = np.quantile(score, 1 - alpha)
+    te_lo = pred[k:, lo_i] - qcorr
+    te_up = pred[k:, up_i] + qcorr
+    te_y = target[k:]
+    cov = float(np.mean((te_y >= te_lo) & (te_y <= te_up)) * 100)
+    width = float(np.mean(te_up - te_lo))
+    return {
+        "conformal_coverage_90": cov,
+        "conformal_width_90": width,
+        "q_correction": float(qcorr),
+        "n_calib": int(k),
+        "n_test": int(n - k),
+    }
+
+
 _DEFAULT_RESULTS_DIR = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "results"
 )
@@ -232,6 +288,7 @@ def main():
         "BaselineLQR",
         "BaselineMLP",
         "BaselineLSTM",
+        "BaselineTransformer",
         "BaselineXGBoost",
         "BaselineRF",
     ]
@@ -309,20 +366,61 @@ def main():
             "crps": crps_trapezoid(preds, targs, quantiles),
         }
 
+    # ---- M6: efficiency (trainable params). train_seconds pending
+    #      wall-clock instrumentation at fit time (ADR-0006).
+    efficiency = {m: {"n_params": count_params(m, config)} for m in method_list}
+
+    # ---- M8: conformal (CQR-around-LQR) vs CASP raw coverage/width (ADR-0007)
+    conformal = {}
+    if "BaselineLQR" in block and block["BaselineLQR"]:
+        lqs = sorted(block["BaselineLQR"].keys())
+        oc = cb = 0.0
+        ow = cbw = 0.0
+        n = 0
+        for sd in lqs:
+            lq_pred, lq_tgt = block["BaselineLQR"][sd]
+            if "ProposedMethod" in block and sd in block["ProposedMethod"]:
+                pr_pred, _ = block["ProposedMethod"][sd]
+                # CASP raw 90% coverage/width on the SAME test half (fair)
+                lo_i, up_i = quantiles.index(0.10), quantiles.index(0.90)
+                k = int(len(lq_tgt) * 0.5)
+                oc += np.mean(
+                    (lq_tgt[k:] >= pr_pred[k:, lo_i])
+                    & (lq_tgt[k:] <= pr_pred[k:, up_i])
+                )
+                ow += np.mean(pr_pred[k:, up_i] - pr_pred[k:, lo_i])
+            c = split_conformal(lq_pred, lq_tgt, quantiles)
+            cb += c["conformal_coverage_90"] / 100.0
+            cbw += c["conformal_width_90"]
+            n += 1
+        conformal["CQR_LQR"] = {
+            "conformal_coverage_90_mean": float(cb / n * 100),
+            "conformal_width_90_mean": float(cbw / n),
+            "n_seeds": n,
+        }
+        if n:
+            conformal["CASP_raw"] = {
+                "coverage_90_mean": float(oc / n * 100),
+                "width_90_mean": float(ow / n),
+                "n_seeds": n,
+            }
+
     doc = {
         "_meta": {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "run_id": args.run_id,
             "source_commit": args.source_commit,
             "originals_intact": None,
             "device": "cpu",
             "quantiles": quantiles,
-            "note": "metrics recomputed from results/per_seed/*.npy (pure pinball AQL).",
+            "note": "metrics recomputed from results/per_seed/*.npy (pure pinball AQL; efficiency (M6) + conformal (M8) added).",
         },
         "metrics": metrics,
         "significance": significance_block,
         "calibration": calibration,
+        "efficiency": efficiency,
+        "conformal": conformal,
         "per_method_pooled_seed_count": {m: len(v) for m, v in block.items()},
     }
 

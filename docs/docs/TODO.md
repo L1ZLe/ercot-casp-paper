@@ -27,5 +27,6 @@ Active and completed tasks live in domain-cluster files under `docs/reference/`.
 
 ---
 
-*Next TODO: 18*
-*Last updated: 2026-09-03*
+*Next TODO: 19*
+*Status: 2026-09-04 — TODO-10/13/15 (M7/M9/M11) implemented; OOD monthly windows + seasonal calibration run (monthly_*_5.json); M11 attention analysis produced (fig_attn_concentration.png); ADRs 0005-0011 recorded. TODO-6 (honest table), TODO-18 (E1/E3/E4/E5 EDAs), TODO-16 (paper edit) pending.*
+*Last updated: 2026-09-04*

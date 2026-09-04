@@ -19,6 +19,9 @@ Discovery: `ls docs/reference/tasks_*.md` gives all clusters at a glance.
 * Notes:
   - Never edit `charts/` figure path references in the paper — figures are produced there
   - All numbers typed in the paper must come from `code/results/results.json` (see AGENTS.md project never-do + ADR-0002)
+  - **Framing & scope (MANDATORY):** follow `docs/explanation/03-paper-framing.md`. Lead with overall calibration + Winkler + coherence + efficiency. Do NOT claim tail/spike coverage is best (MLP is higher); do NOT claim PIT-uniform calibration (KS rejects all). Report the conformalized-LQR result and AQL parity with the honest one-line phrasings given there.
+  - Add the pre-specified decision-relevant-primary sentence (03-paper-framing.md §1) to the intro/methods.
+  - Delete the obsolete "we do not compare against conformalized quantile regression" limitation line (M8 answered it).
 
 ---
 

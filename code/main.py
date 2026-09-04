@@ -31,6 +31,7 @@ from models import (
     BaselineRF,
     BaselineXGBoost,
     ProposedMethod,
+    BaselineTransformer,
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -243,6 +244,8 @@ def run_pytorch_model(model_class, config, seed, train_loader, val_loader, test_
     model.eval()
     all_preds = []
     all_targets = []
+    all_attn = []
+    all_mu = []  # per-hour max shadow price (slot_features[:,:,0]) for M11
     with torch.no_grad():
         for batch in test_loader:
             for key in batch:
@@ -251,12 +254,33 @@ def run_pytorch_model(model_class, config, seed, train_loader, val_loader, test_
             pred = model(batch)
             all_preds.append(pred.cpu())
             all_targets.append(batch["target"].cpu())
+            # M11: capture attention weights for the constraint-attention
+            # models (cached on self._attn during forward); and the slot
+            # shadow-price magnitude for the concentration-by-mu analysis.
+            attn = getattr(model, "_attn", None)
+            if attn is not None:
+                all_attn.append(np.asarray(attn, dtype=np.float64))
+                slot = batch["slot_features"].cpu().numpy()  # [B, K, 4]
+                all_mu.append(slot[:, :, 0])  # shadow price, col 0
 
     all_preds = torch.cat(all_preds, dim=0)
     all_targets = torch.cat(all_targets, dim=0)
 
     # Persist per-seed predictions (anti-hallucination spine)
     save_per_seed(model_name, seed, all_preds.numpy(), all_targets.numpy(), config)
+
+    # M11: persist attention + shadow-price for the attention models so the
+    # interpretability analysis (analysis_interp.py) recomputes from real data.
+    if all_attn:
+        attn = np.concatenate(all_attn, axis=0)  # [N, K]
+        mu = np.concatenate(all_mu, axis=0)  # [N, K]
+        save_dir = os.path.join(config.results_dir, "per_seed")
+        os.makedirs(save_dir, exist_ok=True)
+        pair = getattr(config, "target_pair", "main").replace("/", "_")
+        np.save(
+            os.path.join(save_dir, f"{pair}__{model_name}_seed{seed}_attn.npy"), attn
+        )
+        np.save(os.path.join(save_dir, f"{pair}__{model_name}_seed{seed}_mu.npy"), mu)
 
     # Compute all metrics
     metrics = compute_all_metrics(all_preds, all_targets, config)
@@ -475,7 +499,10 @@ def main():
         "BaselineMLP": BaselineMLP,
     }
     # LSTM uses sequential data
-    pytorch_lstm = {"BaselineLSTM": BaselineLSTM}
+    pytorch_lstm = {
+        "BaselineLSTM": BaselineLSTM,
+        "BaselineTransformer": BaselineTransformer,
+    }
     # XGBoost and RF are non-PyTorch
     non_pytorch = ["BaselineXGBoost", "BaselineRF"]
 

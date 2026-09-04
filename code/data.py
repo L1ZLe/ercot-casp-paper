@@ -17,17 +17,25 @@ from torch.utils.data import DataLoader, Dataset
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-CHECKSUM_FILE = "ercot_checksums.json"
+
+def _checksum_path(year="2026"):
+    return os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), f"ercot_checksums_{year}.json"
+    )
 
 
-def compute_checksums(data_dir):
-    """Compute SHA256 checksums for the 5 required parquet files."""
+def _checksum_file(year="2026"):
+    return _checksum_path(year)
+
+
+def compute_checksums(data_dir, year="2026"):
+    """Compute SHA256 checksums for the 5 required parquet files for a year."""
     required_files = [
-        "ercot_dam_prices_2026.parquet",
-        "ercot_dam_constraints_2026.parquet",
-        "ercot_actual_load_2026.parquet",
-        "ercot_ptp_bids_2026.parquet",
-        "ercot_ptp_awards_2026.parquet",
+        f"ercot_dam_prices_{year}.parquet",
+        f"ercot_dam_constraints_{year}.parquet",
+        f"ercot_actual_load_{year}.parquet",
+        f"ercot_ptp_bids_{year}.parquet",
+        f"ercot_ptp_awards_{year}.parquet",
     ]
     checksums = {}
     for fname in required_files:
@@ -43,32 +51,33 @@ def compute_checksums(data_dir):
     return checksums
 
 
-def save_checksums(checksums):
-    with open(CHECKSUM_FILE, "w") as f:
+def save_checksums(checksums, year="2026"):
+    with open(_checksum_path(year), "w") as f:
         json.dump(checksums, f, indent=2)
 
 
-def load_checksums():
-    if os.path.exists(CHECKSUM_FILE):
-        with open(CHECKSUM_FILE, "r") as f:
+def load_checksums(year="2026"):
+    pth = _checksum_path(year)
+    if os.path.exists(pth):
+        with open(pth, "r") as f:
             return json.load(f)
     return None
 
 
-def copy_protect_verify(data_dir):
+def copy_protect_verify(data_dir, year="2026"):
     """Verify all 5 parquet files have not been modified using SHA256 checksums.
     Computes checksums on first run and caches them."""
-    stored = load_checksums()
+    stored = load_checksums(year)
     current = None
     all_ok = None
     if stored is None:
         logger.info("No checksum file found. Computing checksums for the first time.")
-        stored = compute_checksums(data_dir)
-        save_checksums(stored)
+        stored = compute_checksums(data_dir, year)
+        save_checksums(stored, year)
         logger.info("Checksums saved.")
     else:
         # Verify against stored
-        current = compute_checksums(data_dir)
+        current = compute_checksums(data_dir, year)
         all_ok = True
         for fname, expected in stored.items():
             actual = current.get(fname)
@@ -88,7 +97,7 @@ def copy_protect_verify(data_dir):
     return True
 
 
-def load_raw_data(data_dir):
+def load_raw_data(data_dir, year="2026"):
     """Load the real ERCOT 2026 parquet files into a dictionary of DataFrames.
 
     Only prices + constraints are loaded into memory (the target pair is
@@ -96,7 +105,7 @@ def load_raw_data(data_dir):
     are NOT loaded — this avoids OOM under the sandbox memory cap). The small
     actual_load file is loaded as an optional auxiliary feature.
     """
-    copy_protect_verify(data_dir)
+    copy_protect_verify(data_dir, year)
     data = {}
     # Load only the price columns actually needed (avoids materializing the
     # full 6.4M-row table and the huge wide pivot -> prevents OOM on 9GB hosts).
@@ -107,7 +116,7 @@ def load_raw_data(data_dir):
         "settlementPointPrice",
     ]
     data["prices"] = pd.read_parquet(
-        os.path.join(data_dir, "ercot_dam_prices_2026.parquet"),
+        os.path.join(data_dir, f"ercot_dam_prices_{year}.parquet"),
         columns=price_cols,
     )
     constraint_cols = [
@@ -121,10 +130,10 @@ def load_raw_data(data_dir):
         "toStationkV",
     ]
     data["constraints"] = pd.read_parquet(
-        os.path.join(data_dir, "ercot_dam_constraints_2026.parquet"),
+        os.path.join(data_dir, f"ercot_dam_constraints_{year}.parquet"),
         columns=constraint_cols,
     )
-    load_path = os.path.join(data_dir, "ercot_actual_load_2026.parquet")
+    load_path = os.path.join(data_dir, f"ercot_actual_load_{year}.parquet")
     if os.path.exists(load_path):
         data["load"] = pd.read_parquet(
             load_path, columns=["deliveryDate", "hourEnding", "actualLoad"]
@@ -180,7 +189,7 @@ class ERCOTSequentialDataset(Dataset):
         }
 
 
-def build_dataset(config):
+def build_dataset(config, test_only=False, sequential=True):
     """
     Build train/val/test datasets from REAL ERCOT 2026 data (LONG format).
 
@@ -194,31 +203,38 @@ def build_dataset(config):
         train_dataset, val_dataset, test_dataset, and sequential variants
         for the LSTM baseline.
     """
-    raw = load_raw_data(config.data_dir)
+    raw = load_raw_data(config.data_dir, getattr(config, "year", "2026"))
     prices_df = raw["prices"]
     constraints_df = raw["constraints"]
 
     # ---- Build an hourly datetime index from deliveryDate + hourEnding ----
     def _to_hour(df):
         # hourEnding looks like "01:00", "14:00", ... -> first two chars = hour
-        df = df.copy()
         he = df["hourEnding"].astype(str).str.slice(0, 2).astype(int)
-        df["hour"] = pd.to_datetime(df["deliveryDate"]) + pd.to_timedelta(he, unit="h")
-        return df
+        # deliveryDate is MIXED format across rows (date-only OR
+        # "YYYY-MM-DD 00:00:00.000000000"); normalize to the YYYY-MM-DD prefix
+        # before parsing so pandas doesn't choke on the trailing time text.
+        dt = df["deliveryDate"].astype(str).str.slice(0, 10)
+        return df.assign(
+            hour=pd.to_datetime(dt, format="%Y-%m-%d") + pd.to_timedelta(he, unit="h")
+        )
 
-    prices_df = _to_hour(prices_df)
-    constraints_df = _to_hour(constraints_df)
-
-    # ---- Memory-frugal: keep ONLY the settlement points we need ----
-    # Build the set of source/sink points involved (main pair + extra pairs),
-    # then filter the long price table down BEFORE pivoting. This cuts the
-    # wide pivot from ~1122 columns to a handful, avoiding OOM on small hosts.
+    # ---- Memory-frugal: keep ONLY the settlement points we need FIRST ----
+    # Filter the long price/constraint tables to the handful of source/sink
+    # points BEFORE the expensive datetime conversion (which otherwise runs on
+    # all 23.7M rows and OOMs the 4GB host). Order: filter -> convert.
     need_points = {config.src_settlement, config.snk_settlement}
     for pair in config.extra_pairs:
         if isinstance(pair, (list, tuple)) and len(pair) >= 2:
             need_points.add(str(pair[0]))
             need_points.add(str(pair[1]))
+
     prices_df = prices_df[prices_df["settlementPoint"].isin(need_points)]
+    # NOTE: constraints_df is NOT filtered by settlement point — it has no
+    # settlementPoint column (keyed by constraintId; the binding-constraint
+    # slots feed attention and are shared across pairs). Apply _to_hour only.
+    prices_df = _to_hour(prices_df)
+    constraints_df = _to_hour(constraints_df)
 
     # ---- Pivot prices long -> wide: index=hour, cols=settlementPoint ----
     # Aggregate by (hour, settlementPoint) in case of duplicates, then pivot.
@@ -243,6 +259,20 @@ def build_dataset(config):
         subset=[config.src_settlement, config.snk_settlement]
     )
     timestamps = list(price_wide.index)
+
+    # Optional date-window filter (month-to-month OOD, ADR-0009). When set,
+    # keep only hours in [window[0], window[1]) BEFORE building samples, so the
+    # chronological 70/15/15 split operates within the window.
+    if getattr(config, "window", None):
+        start = pd.Timestamp(config.window[0])
+        end = pd.Timestamp(config.window[1]) if len(config.window) > 1 else None
+        if end is not None:
+            timestamps = [ts for ts in timestamps if start <= ts < end]
+        else:
+            timestamps = [ts for ts in timestamps if ts >= start]
+        logger.info(
+            f"window {config.window[0]}..{config.window[1] if end is not None else 'end'}: kept {len(timestamps)} hours"
+        )
 
     # ---- Build constraint ID mapping (stable order) ----
     all_ids = constraints_df["constraintId"].unique()
@@ -356,8 +386,24 @@ def build_dataset(config):
     n = len(samples)
     if n < 50:
         raise RuntimeError(f"Not enough hourly samples after pivot: {n}")
+    lookback = 24  # sequential lookback (LSTM/Transformer)
     train_end = int(0.7 * n)
     val_end = int(0.85 * n)
+
+    # Held-out-year path (M7 cross-year OOD): we never train on the held-out
+    # year, so build only its test slice for prediction. This keeps memory low
+    # (the OOM cause when both years' full + sequential loaders were built).
+    if test_only:
+        test_samples = samples[val_end:]
+        test_dataset = ERCOTSpreadDataset(test_samples, config)
+        test_seq = (
+            ERCOTSequentialDataset(test_samples, lookback) if sequential else None
+        )
+        logger.info(
+            f"TEST-ONLY split: test={len(test_samples)}; hour range {timestamps[0]} .. {timestamps[-1]}"
+        )
+        return None, None, test_dataset, None, None, test_seq
+
     train_samples = samples[:train_end]
     val_samples = samples[train_end:val_end]
     test_samples = samples[val_end:]
@@ -371,11 +417,11 @@ def build_dataset(config):
     val_dataset = ERCOTSpreadDataset(val_samples, config)
     test_dataset = ERCOTSpreadDataset(test_samples, config)
 
-    # Sequential datasets for the LSTM baseline
-    lookback = 24
-    train_seq = ERCOTSequentialDataset(train_samples, lookback)
-    val_seq = ERCOTSequentialDataset(val_samples, lookback)
-    test_seq = ERCOTSequentialDataset(test_samples, lookback)
+    # Sequential datasets for the LSTM/Transformer baselines (built only when
+    # requested — cross-year pass A uses sequential=False to save memory).
+    train_seq = ERCOTSequentialDataset(train_samples, lookback) if sequential else None
+    val_seq = ERCOTSequentialDataset(val_samples, lookback) if sequential else None
+    test_seq = ERCOTSequentialDataset(test_samples, lookback) if sequential else None
 
     # Free the large raw/pivot frames now that samples are built — prevents
     # OOM when build_dataset() is called repeatedly (main + each generalization
@@ -391,15 +437,42 @@ def build_dataset(config):
     return train_dataset, val_dataset, test_dataset, train_seq, val_seq, test_seq
 
 
-def get_dataloaders(config):
-    """Create DataLoaders for train/val/test including sequential versions."""
-    train_ds, val_ds, test_ds, train_seq, val_seq, test_seq = build_dataset(config)
-    train_loader = DataLoader(train_ds, batch_size=config.batch_size, shuffle=True)
-    val_loader = DataLoader(val_ds, batch_size=config.batch_size, shuffle=False)
+def get_dataloaders(config, test_only=False, sequential=True):
+    """Create DataLoaders for train/val/test including sequential versions.
+
+    test_only=True returns only the test split (train/val/seq = None) for the
+    held-out year in cross-year OOD (M7) — avoids building unused loaders that
+    caused OOM when both years were fully loaded.
+    """
+    train_ds, val_ds, test_ds, train_seq, val_seq, test_seq = build_dataset(
+        config, test_only=test_only, sequential=sequential
+    )
+    train_loader = (
+        DataLoader(train_ds, batch_size=config.batch_size, shuffle=True)
+        if train_ds
+        else None
+    )
+    val_loader = (
+        DataLoader(val_ds, batch_size=config.batch_size, shuffle=False)
+        if val_ds
+        else None
+    )
     test_loader = DataLoader(test_ds, batch_size=config.batch_size, shuffle=False)
-    train_seq_loader = DataLoader(train_seq, batch_size=config.batch_size, shuffle=True)
-    val_seq_loader = DataLoader(val_seq, batch_size=config.batch_size, shuffle=False)
-    test_seq_loader = DataLoader(test_seq, batch_size=config.batch_size, shuffle=False)
+    train_seq_loader = (
+        DataLoader(train_seq, batch_size=config.batch_size, shuffle=True)
+        if train_seq
+        else None
+    )
+    val_seq_loader = (
+        DataLoader(val_seq, batch_size=config.batch_size, shuffle=False)
+        if val_seq
+        else None
+    )
+    test_seq_loader = (
+        DataLoader(test_seq, batch_size=config.batch_size, shuffle=False)
+        if test_seq
+        else None
+    )
     return (
         train_loader,
         val_loader,

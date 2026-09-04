@@ -52,8 +52,12 @@ class Config:
 
         # Data paths
         # Locked by ADR-0003: external ERCOT 2026 raw parquet, sha256-verified.
+        # `year` lets M7 (cross-year OOD, ADR-0008) re-source to 2025 for the
+        # train year while keeping provenance per-year.
+        self.year = "2026"
         self.data_dir = (
-            "/home/l1zle/EnergexCapital/ERCOT/data/raw/ercot_raw_data/2026_data/"
+            "/home/l1zle/EnergexCapital/ERCOT/data/raw/ercot_raw_data/"
+            f"{self.year}_data/"
         )
 
         # Target pair (highest-volume source-sink), locked by ADR-0004
@@ -66,6 +70,13 @@ class Config:
 
         # Spike definition
         self.spike_percentile = 95
+
+        # Optional exclusive date window [start, end) as "YYYY-MM-DD" or None.
+        # When set (month-to-month OOD, ADR-0009), build_dataset filters the
+        # hourly index to this range BEFORE the chronological split, so e.g.
+        # window=["2026-01-01","2026-06-01"] trains on Jan-May and the 15/15
+        # tail becomes the near-range out-of-sample test.
+        self.window = None
 
         # Device (fixed to CPU for reproducible, commodity-hardware runs), locked by ADR-0004
         self.device = torch.device("cpu")

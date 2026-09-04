@@ -26,3 +26,10 @@ best_model_*.pth
 
 # OS
 .DS_Store
+
+# Regenerable experiment outputs (root-level, from run_*.py / main.py)
+*.json
+!code/ercot_checksums.json
+!manifest.json
+!sanitization_report.json
+!verification_report.json

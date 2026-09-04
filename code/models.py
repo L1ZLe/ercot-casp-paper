@@ -120,6 +120,11 @@ class ProposedMethod(BaseModel):
             self.slot_feat_dim
         )
         attn_weights = F.softmax(attn_scores, dim=-1)  # [B, 1, K]
+        self._attn = (
+            attn_weights.detach().squeeze(1).cpu().numpy()
+            if not self.training
+            else None
+        )
 
         mu_k = self.latent_mu_linear(values).squeeze(-1)  # [B, K]
         Delta_SF = attn_weights.squeeze(1)  # [B, K]
@@ -471,6 +476,47 @@ class BaselineLSTM(BaseModel):
         combined = torch.cat([x_slots, x_temporal, x_path], dim=-1)  # [B, L, input_dim]
         lstm_out, _ = self.lstm(combined)
         quantiles = self.head(lstm_out[:, -1, :])  # [B, num_quantiles]
+        return quantiles
+
+
+class BaselineTransformer(BaseModel):
+    """Modern deep baseline: a causal multi-head Transformer over the hourly
+    sequence, mirroring BaselineLSTM's input and producing 7 quantiles.
+
+    Reuses the LSTM sequential loader (no new data shape). This answers the
+    reviewer requirement for a modern deep forecaster (M9, ADR-0008).
+    """
+
+    def __init__(self, config):
+        super().__init__(config)
+        self.d_model = 64
+        self.lookback = 24
+        input_dim = config.slot_feat_dim + config.temporal_emb_dim + config.path_emb_dim
+        self.input_proj = nn.Linear(input_dim, self.d_model)
+        enc_layer = nn.TransformerEncoderLayer(
+            d_model=self.d_model, nhead=4, dim_feedforward=128, batch_first=True
+        )
+        self.encoder = nn.TransformerEncoder(enc_layer, num_layers=2)
+        self.head = nn.Linear(self.d_model, config.num_quantiles)
+
+    def forward(self, batch):
+        slot_seq = batch["slot_sequence"]  # [B, L, K, 4]
+        temporal_seq = batch["temporal_sequence"]  # [B, L, 18]
+        path_id_seq = batch["path_id_sequence"]  # [B, L]
+        x_slots = self.slot_encoder(slot_seq)  # [B, L, K, slot_feat_dim]
+        x_slots = x_slots.mean(dim=2)  # [B, L, slot_feat_dim]
+        x_temporal = self.temporal_encoder(temporal_seq)  # [B, L, temporal_emb_dim]
+        x_path = self.path_embedding(path_id_seq[:, -1])  # [B, path_emb_dim]
+        x_path = x_path.unsqueeze(1).expand(
+            -1, slot_seq.size(1), -1
+        )  # [B, L, path_emb_dim]
+        combined = torch.cat([x_slots, x_temporal, x_path], dim=-1)  # [B, L, input_dim]
+        x = self.input_proj(combined)
+        # Causal masking so the model only sees past+present (fair for a forecast)
+        L = x.size(1)
+        mask = torch.triu(torch.full((L, L), float("-inf")), diagonal=1).to(x.device)
+        out = self.encoder(x, mask=mask)
+        quantiles = self.head(out[:, -1, :])  # [B, num_quantiles]
         return quantiles
 
 
