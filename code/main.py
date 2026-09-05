@@ -86,8 +86,11 @@ def save_per_seed(method_name, seed, pred, target, config):
     os.makedirs(save_dir, exist_ok=True)
     safe = method_name.replace(" ", "_")
     pair = getattr(config, "target_pair", "main").replace("/", "_")
-    np.save(os.path.join(save_dir, f"{pair}__{safe}_seed{seed}_pred.npy"), pred)
-    np.save(os.path.join(save_dir, f"{pair}__{safe}_seed{seed}_target.npy"), target)
+    tag = getattr(config, "run_tag", "main")
+    np.save(os.path.join(save_dir, f"{tag}__{pair}__{safe}_seed{seed}_pred.npy"), pred)
+    np.save(
+        os.path.join(save_dir, f"{tag}__{pair}__{safe}_seed{seed}_target.npy"), target
+    )
 
 
 def train_one_epoch(model, dataloader, optimizer, config):
@@ -200,6 +203,22 @@ def compute_all_metrics(pred, target, config):
     )
     success_rate = np.mean(in_interval) * 100
     metrics["success_rate"] = success_rate
+
+    # Winkler interval score (width-fair calibration): interval width + 2/alpha
+    # penalty for misses, alpha = 1 - coverage (0.10 for the 90% band). Lower is
+    # better. This is the honest width-aware calibration read (M2/ADR-0011).
+    alpha = 1.0 - 0.90
+    y = target.squeeze()
+    L = pred[:, lower_idx]
+    U = pred[:, upper_idx]
+    winkler = float(
+        np.mean(
+            (U - L)
+            + (2.0 / alpha) * np.maximum(L - y, 0.0)
+            + (2.0 / alpha) * np.maximum(y - U, 0.0)
+        )
+    )
+    metrics["winkler_90"] = winkler
 
     return metrics
 

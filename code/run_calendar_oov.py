@@ -46,6 +46,7 @@ def _shift(d, year):
 def cfg_for(year, start, end):
     c = Config()
     c.year = year
+    c.run_tag = "calendar"
     c.data_dir = (
         "/home/l1zle/EnergexCapital/ERCOT/data/raw/ercot_raw_data/" f"{year}_data/"
     )

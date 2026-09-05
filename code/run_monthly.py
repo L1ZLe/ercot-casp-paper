@@ -25,6 +25,7 @@ from config import Config
 from data import get_dataloaders
 from models import (
     ProposedMethod,
+    AblationWOAttention,
     BaselineLQR,
     BaselineMLP,
     BaselineLSTM,
@@ -48,6 +49,7 @@ def main():
 
     methods = {
         "ProposedMethod": ProposedMethod,
+        "AblationWOAttention": AblationWOAttention,
         "BaselineLQR": BaselineLQR,
         "BaselineMLP": BaselineMLP,
         "BaselineLSTM": BaselineLSTM,
@@ -60,6 +62,7 @@ def main():
         "/home/l1zle/EnergexCapital/ERCOT/data/raw/ercot_raw_data/" f"{args.year}_data/"
     )
     cfg.window = [args.start, args.end]
+    cfg.run_tag = "monthly"
     logger.info(
         f"Month-OOD: window=[{args.start},{args.end})  (last 15% = held-out test, no tuning)"
     )
@@ -98,7 +101,14 @@ def main():
     gc.collect()
 
     summary = {}
-    keys = ["average_quantile_loss", "MAE", "RMSE", "success_rate", "interval_width_90"]
+    keys = [
+        "average_quantile_loss",
+        "MAE",
+        "RMSE",
+        "success_rate",
+        "interval_width_90",
+        "winkler_90",
+    ]
     for name in methods:
         row = {}
         for k in keys:

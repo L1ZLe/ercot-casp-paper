@@ -78,6 +78,10 @@ class Config:
         # tail becomes the near-range out-of-sample test.
         self.window = None
 
+        # Run-scope tag for per-seed filenames (main | monthly | calendar | cross-year)
+        # so distinct experiments never overwrite each other's predictions (ADR-0012 pending).
+        self.run_tag = "main"
+
         # Device (fixed to CPU for reproducible, commodity-hardware runs), locked by ADR-0004
         self.device = torch.device("cpu")
 

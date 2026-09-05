@@ -55,6 +55,7 @@ def main():
     def cfg_for(year):
         c = Config()
         c.year = year
+        c.run_tag = "cross_year"
         c.data_dir = (
             "/home/l1zle/EnergexCapital/ERCOT/data/raw/ercot_raw_data/" f"{year}_data/"
         )

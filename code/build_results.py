@@ -178,8 +178,9 @@ def significance(proposed, baseline, metric):
 def load_per_seed(results_dir, method_list, pair=None):
     """Load per-seed pred/target .npy blocks for a given target pair.
 
-    Filenames are `<pair>__<Method>_seed<N>_{pred,target}.npy` (pair-aware),
-    so generalization runs on other pairs never bleed into the main-pair set.
+    Filenames are `<run_tag>__<pair>__<Method>_seed<N>_{pred,target}.npy`
+    (run- AND pair-aware since ADR-0012), defaulting to run_tag="main" so only
+    the true in-sample predictions accumulate; OOD runs never bleed in.
     """
     from main import Config
 
@@ -189,7 +190,7 @@ def load_per_seed(results_dir, method_list, pair=None):
     block = {m: {} for m in method_list}
     for m in method_list:
         safe = m.replace(" ", "_")
-        prefix = f"{pair.replace('/', '_')}__{safe}"
+        prefix = f"main__{pair.replace('/', '_')}__{safe}"
         for f in sorted(
             glob.glob(os.path.join(per_seed_dir, f"{prefix}_seed*_pred.npy"))
         ):
