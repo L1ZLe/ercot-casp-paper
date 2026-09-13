@@ -85,13 +85,30 @@ class Config:
         # Device (fixed to CPU for reproducible, commodity-hardware runs), locked by ADR-0004
         self.device = torch.device("cpu")
 
-        # Results output directory (per-seed predictions + canonical JSON).
+        # Result output directory (per-seed predictions + canonical JSON).
         # Anchored to the code/ directory so it is stable regardless of cwd or
         # where this module is imported from. Canonical results live in
         # code/results/ (locked by ADR-0002). Do not retarget without superseding.
         self.results_dir = os.path.join(
             os.path.dirname(os.path.abspath(__file__)), "code", "results"
         )
+
+        # Model checkpoint directory — single home for best_model_*.pth files
+        # (ADR-0002, TODO-2). All runners save/load checkpoints from here.
+        self.models_dir = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "models"
+        )
+
+        # Coherence head mode: "soft" (plain MLP head + LA-CASF soft penalty)
+        # or "hier" (hierarchical non-crossing head, median + softplus outward
+        # increments -> ordering guaranteed by construction). Part of the B3
+        # coherence 2x2 experiment. Must be set before model construction.
+        self.head_mode = "soft"
+
+        # Constraint-snapshot lead hours (B5 delayed-input sensitivity).
+        # Default 1 = the existing strict-prior hour. Larger values emulate a
+        # stale/late constraint file to measure calibration degradation.
+        self.constraint_lead_hours = 1
 
         # LA-CASF penalty weight — training-only objective, never a metric, locked by ADR-0004
         self.lambda_casf = 0.1

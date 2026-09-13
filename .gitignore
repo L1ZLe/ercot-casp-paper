@@ -16,10 +16,10 @@ code/results/
 *.npy
 chart_tmp/
 
-# Trained model checkpoints — regenerable by training; policy in ADR-0002
+# Trained model checkpoints — single home in models/; regenerable by training
+# (policy in ADR-0002, TODO-2). The old root-level best_model_*.pth artifacts
+# were consolidated into models/ 2026-09-13.
 models/
-code/best_model_*.pth
-best_model_*.pth
 
 # Local editor settings
 .vscode/
