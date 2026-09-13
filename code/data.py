@@ -340,12 +340,20 @@ def build_dataset(config, test_only=False, sequential=True):
         # spread would peek at the answer (DAM shadow prices are only known after
         # the auction clears). Use the most recent PREVIOUS constraint snapshot
         # strictly before the target hour.
+        #
+        # B5 delayed-input sensitivity (ADR-0012-pending): config.constraint_lead_hours
+        # (>1) emulates a stale/late constraint file — at hour t we only have the
+        # constraint snapshot from t - lead_hours (or the nearest earlier one).
+        lead = max(int(getattr(config, "constraint_lead_hours", 1)), 1)
         prev_ts = None
-        for _j in range(1, min(len(timestamps), i) + 1):
-            cand = timestamps[i - _j]
-            if cand < ts:
-                prev_ts = cand
-                break
+        if i >= lead and lead < len(timestamps):
+            prev_ts = timestamps[i - lead]
+        else:
+            for _j in range(1, min(len(timestamps), i) + 1):
+                cand = timestamps[i - _j]
+                if cand < ts:
+                    prev_ts = cand
+                    break
         slot_hour = prev_ts if prev_ts is not None else ts
         slots = list(slot_features_by_hour.get(slot_hour, []))
         while len(slots) < config.K_slots:
