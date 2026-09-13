@@ -48,7 +48,12 @@ class Config:
         # Experiment control
         self.seed_list = [42, 43, 44, 45, 46]  # 5-seed protocol, locked by ADR-0004
         self.max_runs = 36
-        self.time_budget_sec = 1800
+        # Time budget (s): safety net so a hung run can't loop forever.
+        # Effectively disabled (set to ~11.5 days) since 2026-09-13: the original
+        # 1800s was sized for ~16 models/seed, but the experiment now trains ~22
+        # models per seed (MRE, hier, deep baselines added), which needs ~30-40
+        # min across 5 seeds. A low budget caused the guard to truncate the run.
+        self.time_budget_sec = 1000000
 
         # Data paths
         # Locked by ADR-0003: external ERCOT 2026 raw parquet, sha256-verified.

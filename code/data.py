@@ -29,20 +29,28 @@ def _checksum_file(year="2026"):
 
 
 def compute_checksums(data_dir, year="2026"):
-    """Compute SHA256 checksums for the 5 required parquet files for a year."""
-    required_files = [
+    """Compute SHA256 checksums for the core parquet files for a year.
+
+    Only files that actually EXIST in data_dir are hashed/required. Some years
+    legitimately lack an auxiliary file (e.g. 2025 has no ercot_actual_load_2025
+    while 2026 does), so a missing optional file must not raise an ERROR — the
+    downstream loader already guards with os.path.exists().
+    """
+    candidate_files = [
         f"ercot_dam_prices_{year}.parquet",
         f"ercot_dam_constraints_{year}.parquet",
         f"ercot_actual_load_{year}.parquet",
         f"ercot_ptp_bids_{year}.parquet",
         f"ercot_ptp_awards_{year}.parquet",
     ]
+    required_files = [
+        fname
+        for fname in candidate_files
+        if os.path.exists(os.path.join(data_dir, fname))
+    ]
     checksums = {}
     for fname in required_files:
         fpath = os.path.join(data_dir, fname)
-        if not os.path.exists(fpath):
-            logger.error(f"File not found: {fpath}")
-            continue
         sha256_hash = hashlib.sha256()
         with open(fpath, "rb") as f:
             for byte_block in iter(lambda: f.read(4096), b""):

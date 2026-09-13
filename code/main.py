@@ -431,8 +431,21 @@ def statistical_testing(
             continue
         baseline = np.array(values[metric_name])
 
+        # Guard: paired stats need EQUAL-length seed vectors. The run can
+        # legitimately end with different per-method seed counts if a time
+        # budget cut later-computing models short, so compare only the common
+        # (min) number of completed seeds.
+        _n = min(len(proposed), len(baseline))
+        if _n < 2:
+            logger.info(
+                f"Comparison {proposed_key} vs {method} on {metric_name}: "
+                f"<2 common seeds (have {len(proposed)} vs {len(baseline)}), skipping"
+            )
+            continue
+        pv, bv = proposed[:_n], baseline[:_n]
+
         # Check if there's enough variance
-        if np.std(proposed) < 1e-10 and np.std(baseline) < 1e-10:
+        if np.std(pv) < 1e-10 and np.std(bv) < 1e-10:
             logger.info(
                 f"Comparison {proposed_key} vs {method} on {metric_name}: both constant, skipping"
             )
@@ -440,27 +453,27 @@ def statistical_testing(
 
         # Paired t-test
         try:
-            t_stat, p_t = stats.ttest_rel(proposed, baseline)
+            t_stat, p_t = stats.ttest_rel(pv, bv)
         except:
             t_stat, p_t = 0.0, 1.0
 
         # Wilcoxon signed-rank test
         try:
-            w_stat, p_w = stats.wilcoxon(proposed, baseline)
+            w_stat, p_w = stats.wilcoxon(pv, bv)
         except:
             w_stat, p_w = 0.0, 1.0
 
         # Sign test
-        diff = proposed - baseline
+        diff = pv - bv
         n_pos = np.sum(diff > 0)
         n_neg = np.sum(diff < 0)
-        n = n_pos + n_neg
-        if n > 0:
-            p_sign = 2 * stats.binom.sf(max(n_pos, n_neg) - 1, n, 0.5)
+        n_s = n_pos + n_neg
+        if n_s > 0:
+            p_sign = 2 * stats.binom.sf(max(n_pos, n_neg) - 1, n_s, 0.5)
         else:
             p_sign = 1.0
 
-        logger.info(f"Comparison {proposed_key} vs {method} on {metric_name}:")
+        logger.info(f"Comparison {proposed_key} vs {method} on {metric_name} (n={_n}):")
         logger.info(f"  Paired t-test: t={t_stat:.4f}, p={p_t:.6f}")
         logger.info(f"  Wilcoxon: W={w_stat:.1f}, p={p_w:.6f}")
         logger.info(f"  Sign test: n_pos={n_pos}, n_neg={n_neg}, p={p_sign:.6f}")

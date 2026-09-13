@@ -35,7 +35,7 @@ models/
 *Zone.Identifier
 
 # Regenerable experiment outputs (root-level, from run_*.py / main.py)
-*.json
+
 !code/ercot_checksums.json
 !manifest.json
 !sanitization_report.json

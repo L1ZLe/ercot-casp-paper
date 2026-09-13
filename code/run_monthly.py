@@ -30,6 +30,13 @@ from models import (
     BaselineMLP,
     BaselineLSTM,
     BaselineTransformer,
+    BaselinePatchTST,
+    BaselineITransformer,
+    BaselineTimesNet,
+    BaselineTimeXer,
+    MarketRuleEmbedded,
+    MarketRuleEmbeddedHier,
+    ProposedMethodHier,
 )
 from main import set_seed, run_pytorch_model
 
@@ -50,11 +57,26 @@ def main():
 
     methods = {
         "ProposedMethod": ProposedMethod,
+        "ProposedMethodHier": ProposedMethodHier,
+        "MarketRuleEmbedded": MarketRuleEmbedded,
+        "MarketRuleEmbeddedHier": MarketRuleEmbeddedHier,
         "AblationWOAttention": AblationWOAttention,
         "BaselineLQR": BaselineLQR,
         "BaselineMLP": BaselineMLP,
         "BaselineLSTM": BaselineLSTM,
         "BaselineTransformer": BaselineTransformer,
+        "BaselinePatchTST": BaselinePatchTST,
+        "BaselineITransformer": BaselineITransformer,
+        "BaselineTimesNet": BaselineTimesNet,
+        "BaselineTimeXer": BaselineTimeXer,
+    }
+    SEQ_MODELS = {
+        "BaselineLSTM",
+        "BaselineTransformer",
+        "BaselinePatchTST",
+        "BaselineITransformer",
+        "BaselineTimesNet",
+        "BaselineTimeXer",
     }
 
     cfg = Config()
@@ -71,7 +93,7 @@ def main():
     # ---- Non-sequential pass (ProposedMethod, LQR, MLP) ----
     tr, va, te, trs, vas, tes = get_dataloaders(cfg, sequential=False)
     results = {}
-    non_seq = [n for n in methods if n not in ("BaselineLSTM", "BaselineTransformer")]
+    non_seq = [n for n in methods if n not in SEQ_MODELS]
     for name in non_seq:
         cls = methods[name]
         results[name] = {"seeds": {}}
@@ -87,7 +109,7 @@ def main():
 
     # ---- Sequential pass (LSTM, Transformer) ----
     tr, va, te, trs, vas, tes = get_dataloaders(cfg, sequential=True)
-    seq_only = [n for n in methods if n in ("BaselineLSTM", "BaselineTransformer")]
+    seq_only = [n for n in methods if n in SEQ_MODELS]
     for name in seq_only:
         cls = methods[name]
         results[name] = {"seeds": {}}

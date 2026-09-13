@@ -27,6 +27,13 @@ from models import (
     BaselineMLP,
     BaselineLSTM,
     BaselineTransformer,
+    BaselinePatchTST,
+    BaselineITransformer,
+    BaselineTimesNet,
+    BaselineTimeXer,
+    MarketRuleEmbedded,
+    MarketRuleEmbeddedHier,
+    ProposedMethodHier,
 )
 from main import set_seed, run_pytorch_model
 
@@ -46,10 +53,27 @@ def main():
 
     methods = {
         "ProposedMethod": ProposedMethod,
+        "ProposedMethodHier": ProposedMethodHier,
+        "MarketRuleEmbedded": MarketRuleEmbedded,
+        "MarketRuleEmbeddedHier": MarketRuleEmbeddedHier,
         "BaselineLQR": BaselineLQR,
         "BaselineMLP": BaselineMLP,
         "BaselineLSTM": BaselineLSTM,
         "BaselineTransformer": BaselineTransformer,
+        "BaselinePatchTST": BaselinePatchTST,
+        "BaselineITransformer": BaselineITransformer,
+        "BaselineTimesNet": BaselineTimesNet,
+        "BaselineTimeXer": BaselineTimeXer,
+    }
+    # Models that require the SEQUENTIAL loader (multi-step lookback), same set
+    # as main.py's pytorch_lstm dispatch.
+    SEQ_MODELS = {
+        "BaselineLSTM",
+        "BaselineTransformer",
+        "BaselinePatchTST",
+        "BaselineITransformer",
+        "BaselineTimesNet",
+        "BaselineTimeXer",
     }
 
     # ---- Config per year (only data_dir/year differ per-side) ----
@@ -78,8 +102,8 @@ def main():
     tr_t, va_t, te_t, trs_t, vas_t, tes_t = get_dataloaders(test_cfg, test_only=True)
 
     results = {}
-    # ---- Pass A: non-sequential models (ProposedMethod, LQR, MLP) ----
-    non_seq = [n for n in methods if n not in ("BaselineLSTM", "BaselineTransformer")]
+    # ---- Pass A: non-sequential models (ProposedMethod, MRE, hier, LQR, MLP) ----
+    non_seq = [n for n in methods if n not in SEQ_MODELS]
     for name in non_seq:
         cls = methods[name]
         results[name] = {"seeds": {}}
@@ -99,7 +123,7 @@ def main():
     # ---- Pass B: sequential models (LSTM, Transformer) need the sequential
     # train/val loaders. Build them on freshly-loaded (sequential) data.
     tr, va, te, trs, vas, tes = get_dataloaders(train_cfg, sequential=True)
-    seq_only = [n for n in methods if n in ("BaselineLSTM", "BaselineTransformer")]
+    seq_only = [n for n in methods if n in SEQ_MODELS]
     for name in seq_only:
         cls = methods[name]
         results[name] = {"seeds": {}}
