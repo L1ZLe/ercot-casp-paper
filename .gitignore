@@ -5,6 +5,9 @@
 *.log
 *.out
 
+# Built paper PDF (source lives in AIstats research paper/paper.tex)
+AIstats research paper/paper.pdf
+
 # Python
 __pycache__/
 *.pyc
@@ -26,6 +29,10 @@ models/
 
 # OS
 .DS_Store
+
+# Windows NTFS alternate-data-stream metadata (never real project content)
+*:Zone.Identifier
+*Zone.Identifier
 
 # Regenerable experiment outputs (root-level, from run_*.py / main.py)
 *.json
