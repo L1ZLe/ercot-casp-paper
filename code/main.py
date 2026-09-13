@@ -738,11 +738,17 @@ def main():
         for m, md in results.items()
     }
     try:
-        with open("results.json", "w", encoding="utf-8") as f:
+        # Write the per-condition aggregate metrics into the results dir. This
+        # is a FLAT summary (harness-readable); the canonical, paper-quoted
+        # results/results.json is always produced by build_results.py. Distinct
+        # name avoids overwriting/confusing the canonical file (single-JSON sink).
+        os.makedirs(config.results_dir, exist_ok=True)
+        flat_path = os.path.join(config.results_dir, "main_conditions.json")
+        with open(flat_path, "w", encoding="utf-8") as f:
             _json.dump(out_results, f, indent=2, default=str)
-        logger.info("Wrote results.json with per-condition aggregate metrics.")
+        logger.info("Wrote %s with per-condition aggregate metrics.", flat_path)
     except OSError as e:
-        logger.warning("Could not write results.json: %s", e)
+        logger.warning("Could not write main_conditions.json: %s", e)
 
     # Statistical testing on multiple metrics
     # vs Naive1/Naive2 (weakest), the best linear benchmark (LQR), and the best

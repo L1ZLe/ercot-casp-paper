@@ -502,9 +502,35 @@ def main():
         except Exception:
             sensitivity = {}
 
+    # ---- OOD / probe sub-experiment ingestion (single-JSON sink).
+    # Cross-year, calendar/seasonal (monthly), and probe runners all write their
+    # own JSONs into code/results/; fold them into the canonical results.json so
+    # the paper can be written entirely from ONE file. Each is optional
+    # (absent if that run hasn't happened yet) and schema-independent.
+    def _load_json(results_dir, fname):
+        p = os.path.join(results_dir, fname)
+        if os.path.exists(p):
+            try:
+                with open(p, encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception:
+                return {}
+        return {}
+
+    ood = {
+        "cross_year": _load_json(args.results_dir, "cross_year_results.json"),
+        "calendar": _load_json(args.results_dir, "calendar_oov_results.json"),
+        "monthly": _load_json(args.results_dir, "monthly_results.json"),
+        "probe_pairs_5seed": _load_json(args.results_dir, "probe_pairs_5seed.json"),
+        "probe_frame_winkler": _load_json(args.results_dir, "probe_frame_winkler.json"),
+        "attention": _load_json(args.results_dir, "attention_analysis.json"),
+    }
+    # Drop empty (never-run) axes so the reader never mistakes absence for zeros.
+    ood = {k: v for k, v in ood.items() if v}
+
     doc = {
         "_meta": {
-            "schema_version": "1.2",
+            "schema_version": "1.3",
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "run_id": args.run_id,
             "source_commit": args.source_commit,
@@ -520,6 +546,7 @@ def main():
         "conformal": conformal,
         "pit_after_conformal": pit_after,
         "sensitivity": sensitivity,
+        "ood": ood,
         "per_method_pooled_seed_count": {m: len(v) for m, v in block.items()},
     }
 

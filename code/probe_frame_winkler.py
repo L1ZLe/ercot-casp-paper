@@ -82,9 +82,10 @@ def main():
         }
         print(f"  {name:18s} success_rate={meansucc:.1f}%  Winkler={meanwink:.2f}")
 
-    with open("probe_frame_winkler.json", "w") as f:
+    out_path = os.path.join(Config().results_dir, "probe_frame_winkler.json")
+    with open(out_path, "w") as f:
         json.dump(results, f, indent=2)
-    print("wrote probe_frame_winkler.json")
+    print("wrote", out_path)
 
 
 if __name__ == "__main__":

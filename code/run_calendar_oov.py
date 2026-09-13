@@ -55,13 +55,16 @@ def cfg_for(year, start, end):
 
 
 def main():
+    from config import Config
+
+    default_out = os.path.join(Config().results_dir, "calendar_oov_results.json")
     ap = argparse.ArgumentParser()
     ap.add_argument("--train-year", default="2025")
     ap.add_argument("--test-year", default="2026")
     ap.add_argument("--start", default="2026-01-01")
     ap.add_argument("--end", default="2026-06-01")
     ap.add_argument("--seeds", default="42,43")
-    ap.add_argument("--out", default="calendar_oov_results.json")
+    ap.add_argument("--out", default=default_out)
     args = ap.parse_args()
     seeds = [int(x) for x in args.seeds.split(",")]
 
