@@ -23,15 +23,22 @@ from models import (
     AblationWOMu,
     AblationWOPathEmbed,
     AblationWOTemporal,
+    BaselineITransformer,
     BaselineLQR,
     BaselineLSTM,
     BaselineMLP,
     BaselineNaive1,
     BaselineNaive2,
+    BaselinePatchTST,
     BaselineRF,
-    BaselineXGBoost,
-    ProposedMethod,
+    BaselineTimeXer,
+    BaselineTimesNet,
     BaselineTransformer,
+    BaselineXGBoost,
+    MarketRuleEmbedded,
+    MarketRuleEmbeddedHier,
+    ProposedMethod,
+    ProposedMethodHier,
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -235,9 +242,13 @@ def run_pytorch_model(model_class, config, seed, train_loader, val_loader, test_
 
     has_trainable = any(p.requires_grad for p in model.parameters())
 
-    # Use method-specific checkpoint filename
+    # Use method-specific checkpoint filename, stored in the models/ dir
+    # (ADR-0002, TODO-2) so checkpoints have a single home regardless of cwd.
     model_name = model_class.__name__
-    checkpoint_path = f"best_model_{model_name}_seed{seed}.pth"
+    os.makedirs(config.models_dir, exist_ok=True)
+    checkpoint_path = os.path.join(
+        config.models_dir, f"best_model_{model_name}_seed{seed}.pth"
+    )
 
     best_val_loss = float("inf")
     if has_trainable:
@@ -506,6 +517,9 @@ def main():
     # Define all methods to run
     pytorch_methods = {
         "ProposedMethod": ProposedMethod,
+        "ProposedMethodHier": ProposedMethodHier,
+        "MarketRuleEmbedded": MarketRuleEmbedded,
+        "MarketRuleEmbeddedHier": MarketRuleEmbeddedHier,
         "AblationWOMu": AblationWOMu,
         "AblationWOID": AblationWOID,
         "AblationWOTemporal": AblationWOTemporal,
@@ -521,6 +535,10 @@ def main():
     pytorch_lstm = {
         "BaselineLSTM": BaselineLSTM,
         "BaselineTransformer": BaselineTransformer,
+        "BaselinePatchTST": BaselinePatchTST,
+        "BaselineITransformer": BaselineITransformer,
+        "BaselineTimesNet": BaselineTimesNet,
+        "BaselineTimeXer": BaselineTimeXer,
     }
     # XGBoost and RF are non-PyTorch
     non_pytorch = ["BaselineXGBoost", "BaselineRF"]

@@ -210,6 +210,9 @@ def count_params(method_name, config):
 
     registry = {
         "ProposedMethod": M.ProposedMethod,
+        "ProposedMethodHier": M.ProposedMethodHier,
+        "MarketRuleEmbedded": M.MarketRuleEmbedded,
+        "MarketRuleEmbeddedHier": M.MarketRuleEmbeddedHier,
         "AblationWOMu": M.AblationWOMu,
         "AblationWOID": M.AblationWOID,
         "AblationWOTemporal": M.AblationWOTemporal,
@@ -219,6 +222,10 @@ def count_params(method_name, config):
         "BaselineMLP": M.BaselineMLP,
         "BaselineLSTM": M.BaselineLSTM,
         "BaselineTransformer": M.BaselineTransformer,
+        "BaselinePatchTST": M.BaselinePatchTST,
+        "BaselineITransformer": M.BaselineITransformer,
+        "BaselineTimesNet": M.BaselineTimesNet,
+        "BaselineTimeXer": M.BaselineTimeXer,
     }
     cls = registry.get(method_name)
     if cls is None:
@@ -231,8 +238,8 @@ def count_params(method_name, config):
 def split_conformal(pred, target, quantiles, alpha=0.10, cal_frac=0.5):
     """Split-conformal widening of the 0.10/0.90 band (M8, ADR-0007).
 
-    Uses the saved LQR per-seed predictions to answer the reviewer question:
-    can LQR + a conformal wrap reach ~90% coverage, and at what width?
+    Uses the saved per-seed predictions to answer the reviewer question:
+    can a method + a conformal wrap reach ~90% coverage, and at what width?
     pred: [N, Q]; target: [N]. Returns corrected coverage + width on the
     non-calibration half.
     """
@@ -258,6 +265,97 @@ def split_conformal(pred, target, quantiles, alpha=0.10, cal_frac=0.5):
     }
 
 
+def split_conformal_band(pred, target, quantiles, alpha=0.10, cal_frac=0.5):
+    """Split-conformal recalibration applied to a method's 0.10/0.90 band.
+
+    Returns calibrated coverage, calibrated width, and the calibrated Winkler
+    score on the held-out (non-calibration) half. Used to make ALL methods
+    comparable (each valid method reaches ~90% coverage after calibration, so
+    the differentiator becomes width / Winkler under guaranteed coverage —
+    the B4 'tightest valid intervals' claim).
+    """
+    r = split_conformal(pred, target, quantiles, alpha=alpha, cal_frac=cal_frac)
+    lo_i, up_i = quantiles.index(0.10), quantiles.index(0.90)
+    k = int(len(target) * cal_frac)
+    te_y = target[k:]
+    te_lo = pred[k:, lo_i] - r["q_correction"]
+    te_up = pred[k:, up_i] + r["q_correction"]
+    alpha_eff = 1.0 - 0.90
+    cs_wink = np.mean(
+        (te_up - te_lo)
+        + (2.0 / alpha_eff) * np.clip(te_lo - te_y, 0, None)
+        + (2.0 / alpha_eff) * np.clip(te_y - te_up, 0, None)
+    )
+    r["conformal_winkler_90"] = float(cs_wink)
+    r["conformal_coverage_90"] = r["conformal_coverage_90"]
+    return r
+
+
+def conformal_all(block, quantiles, alpha=0.10, cal_frac=0.5):
+    """Apply split-conformal band calibration to every method (B4).
+
+    Per method, for each seed independently, compute calibrated coverage,
+    width, and Winkler on the held-out half, then average across seeds.
+    Returns {method: {conformal_coverage_90_mean, conformal_width_90_mean,
+    conformal_winkler_90_mean, n_seeds}} for methods with valid data.
+    """
+    out = {}
+    for m, seeds in block.items():
+        if not seeds:
+            continue
+        cov = wdt = wink = 0.0
+        n = 0
+        for sd in sorted(seeds):
+            pred, tgt = seeds[sd]
+            pred = np.asarray(pred, float)
+            tgt = np.asarray(tgt, float).reshape(-1)
+            pred = pred.reshape(-1, len(quantiles))  # handles 3D/[N,1] defensively
+            r = split_conformal_band(pred, tgt, quantiles, alpha, cal_frac)
+            cov += r["conformal_coverage_90"] / 100.0
+            wdt += r["conformal_width_90"]
+            wink += r["conformal_winkler_90"]
+            n += 1
+        if n:
+            out[m] = {
+                "conformal_coverage_90_mean": float(cov / n * 100),
+                "conformal_width_90_mean": float(wdt / n),
+                "conformal_winkler_90_mean": float(wink / n),
+                "n_seeds": n,
+            }
+    return out
+
+
+def pit_after_conformal(pred, target, quantiles, cal_frac=0.5):
+    """PIT-uniformity of the conformally-corrected intervals.
+
+    Applies the split-conformal band shift (same as split_conformal) to the
+    test half and returns the KS statistic + p-value of the corrected targets
+    against uniform, plus the mean PIT of corrected intervals. Lets us report
+    whether conformalization repairs the distributional calibration that the
+    raw models fail.
+    """
+    from scipy import stats as st
+
+    lo_i, up_i = quantiles.index(0.10), quantiles.index(0.90)
+    n = len(target)
+    k = int(n * cal_frac)
+    score = np.maximum(pred[:k, lo_i] - target[:k], target[:k] - pred[:k, up_i])
+    qcorr = np.quantile(score, 1 - (1 - 0.90))
+    t = target[k:]
+    pl = pred[k:, lo_i] - qcorr
+    pu = pred[k:, up_i] + qcorr
+    # corrected PIT on the band width (within [0.10, 0.90] after shift)
+    pit = (t - pl) / (pu - pl)
+    pit = np.clip(pit, 0.0, 1.0)
+    ks_d, ks_p = st.kstest(pit, "uniform")
+    return {
+        "pit_band_ks_stat": float(ks_d),
+        "pit_band_ks_p": float(ks_p),
+        "pit_band_mean": float(pit.mean()),
+        "n_test": int(n - k),
+    }
+
+
 _DEFAULT_RESULTS_DIR = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "results"
 )
@@ -278,6 +376,9 @@ def main():
     # All conditions (methods) we expect per-seed blocks for.
     method_list = [
         "ProposedMethod",
+        "ProposedMethodHier",
+        "MarketRuleEmbedded",
+        "MarketRuleEmbeddedHier",
         "AblationWOMu",
         "AblationWOID",
         "AblationWOTemporal",
@@ -290,6 +391,10 @@ def main():
         "BaselineMLP",
         "BaselineLSTM",
         "BaselineTransformer",
+        "BaselinePatchTST",
+        "BaselineITransformer",
+        "BaselineTimesNet",
+        "BaselineTimeXer",
         "BaselineXGBoost",
         "BaselineRF",
     ]
@@ -371,57 +476,50 @@ def main():
     #      wall-clock instrumentation at fit time (ADR-0006).
     efficiency = {m: {"n_params": count_params(m, config)} for m in method_list}
 
-    # ---- M8: conformal (CQR-around-LQR) vs CASP raw coverage/width (ADR-0007)
-    conformal = {}
-    if "BaselineLQR" in block and block["BaselineLQR"]:
-        lqs = sorted(block["BaselineLQR"].keys())
-        oc = cb = 0.0
-        ow = cbw = 0.0
-        n = 0
-        for sd in lqs:
-            lq_pred, lq_tgt = block["BaselineLQR"][sd]
-            if "ProposedMethod" in block and sd in block["ProposedMethod"]:
-                pr_pred, _ = block["ProposedMethod"][sd]
-                # CASP raw 90% coverage/width on the SAME test half (fair)
-                lo_i, up_i = quantiles.index(0.10), quantiles.index(0.90)
-                k = int(len(lq_tgt) * 0.5)
-                oc += np.mean(
-                    (lq_tgt[k:] >= pr_pred[k:, lo_i])
-                    & (lq_tgt[k:] <= pr_pred[k:, up_i])
-                )
-                ow += np.mean(pr_pred[k:, up_i] - pr_pred[k:, lo_i])
-            c = split_conformal(lq_pred, lq_tgt, quantiles)
-            cb += c["conformal_coverage_90"] / 100.0
-            cbw += c["conformal_width_90"]
-            n += 1
-        conformal["CQR_LQR"] = {
-            "conformal_coverage_90_mean": float(cb / n * 100),
-            "conformal_width_90_mean": float(cbw / n),
-            "n_seeds": n,
-        }
-        if n:
-            conformal["CASP_raw"] = {
-                "coverage_90_mean": float(oc / n * 100),
-                "width_90_mean": float(ow / n),
-                "n_seeds": n,
-            }
+    # ---- M8/B4: conformal calibration applied to ALL competitive methods.
+    # After calibration every valid method reaches ~90% coverage, so the
+    # differentiator becomes width / Winkler under guaranteed coverage.
+    conformal = conformal_all(block, quantiles)
+
+    # PIT-after-calibration: does conformalization repair distributional
+    # uniformity per method? (B4 — the AISTATS review concern.)
+    pit_after = {}
+    for m in method_list:
+        if not block[m]:
+            continue
+        preds = np.concatenate([p for p, _ in block[m].values()], axis=0)
+        targs = np.concatenate([t for _, t in block[m].values()], axis=0)
+        pit_after[m] = pit_after_conformal(preds, targs, quantiles)
+
+    # ---- B5: sensitivity (lag-set + delayed-constraint) ingestion.
+    # If run_sensitivity.py wrote sensitivity_results.json, fold it in.
+    sensitivity = {}
+    sens_path = os.path.join(args.results_dir, "sensitivity_results.json")
+    if os.path.exists(sens_path):
+        try:
+            with open(sens_path, encoding="utf-8") as f:
+                sensitivity = json.load(f)
+        except Exception:
+            sensitivity = {}
 
     doc = {
         "_meta": {
-            "schema_version": "1.1",
+            "schema_version": "1.2",
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "run_id": args.run_id,
             "source_commit": args.source_commit,
             "originals_intact": None,
             "device": "cpu",
             "quantiles": quantiles,
-            "note": "metrics recomputed from results/per_seed/*.npy (pure pinball AQL; efficiency (M6) + conformal (M8) added).",
+            "note": "metrics recomputed from results/per_seed/*.npy (pure pinball AQL; efficiency (M6) + conformal-all (B4) + sensitivity (B5) added).",
         },
         "metrics": metrics,
         "significance": significance_block,
         "calibration": calibration,
         "efficiency": efficiency,
         "conformal": conformal,
+        "pit_after_conformal": pit_after,
+        "sensitivity": sensitivity,
         "per_method_pooled_seed_count": {m: len(v) for m, v in block.items()},
     }
 
