@@ -124,3 +124,33 @@ Run these BEFORE the full 5-seed grid. They answer: (i) is attention load-bearin
 - A **new, standalone exploration** in `godmode/`. It does not modify or invalidate the current `code/` SPARC pipeline.
 - If the A/B/C probes pass, GODMODE becomes a candidate *method* contribution (novel fusion + calibration-efficiency metric + beats deep baselines).
 - If they fail, the current SPARC calibration-first framing for e-Energy/IEEE remains intact; no time lost beyond ~15 min of probes.
+
+---
+
+## 9. Probe results (2026-09-13, seed 42)
+
+Single-seed probes A/B/C/full ran clean (`godmode/run_godmode_probes.py`, ~15 min CPU, reuse loaders). Verdicts written to `godmode/results/godmode_probes_seed42.json` and `godmode/results/godmode_results.json`.
+
+| method | AQL | cal-cov | cal-width | cal-winkler | verdict |
+|---|---|---|---|---|---|
+| **GodmodeA** (linear+market+conformal) | 1.159 | 88.84 | 12.717 | 22.345 | FAIL |
+| **GodmodeB** (time-in-query) | 1.239 | 88.84 | 14.243 | 18.359 | FAIL |
+| **GodmodeC** (identity-only Occam) | 1.228 | 89.93 | 14.612 | 18.366 | **PASS** |
+| **Godmode** (full fusion) | 1.213 | 91.03 | 14.089 | 18.863 | FAIL |
+| BaselineLQR | 1.167 | 91.90 | 12.917 | 19.864 | — |
+| **ProposedMethod (SPARC)** | 1.214 | 91.90 | 12.906 | **17.524** | — reference |
+| ProposedMethodHier | 1.233 | 91.47 | 13.221 | 17.645 | — |
+| MarketRuleEmbedded | 1.230 | 93.44 | 13.989 | 19.122 | — |
+| MarketRuleEmbeddedHier | 1.328 | 88.84 | 13.623 | 20.838 | — |
+| BaselineMLP | 1.405 | 94.97 | 16.506 | 18.883 | — |
+
+### Verdict interpretation
+
+- **The fusion did NOT beat the incumbent.** `ProposedMethod` (the current SPARC) has the **best calibrated Winkler of all models tested** (17.524 vs best GODMODE 18.359). The additive `base + residual + bias` recombination does not improve on the metric the design chose (V8: calibration-efficiency).
+- **Blockwise, GODMODE underperforms SPARC on the very metric it was built to win.** Conformalizing SPARC already delivers 91.9% coverage at the tightest calibrated width (12.906). The fusion adds complexity without a calibration-efficiency gain.
+- **The one PROBE that passed (C) is the simplest**: identity-only conditioning + hier head + conformal (18.366). It beats the full fusion, consistent with V7 ("identity >> shadow-price magnitude"). But it still trails `ProposedMethod` (17.524), so C is not a replacement — it confirms the parsimony direction, not a new SOTA.
+- **AQL pattern preserved:** GodmodeA (linear-spine) posts the best AQL (1.159) of the group, reaffirming V2 (stable linear backbone owns AQL) — but AQL is not the deciding metric (V8).
+
+### Takeaway
+
+Per §5 pass/fail lines, **A/B/full all FAIL and the reference already wins** → the GODMODE fusion experiment is a **negative result** for the recombination hypothesis. In accordance with §7, the load-bearing assumption is intact but unhelpful here: the current SPARC already occupies the calibration-efficiency optimum on this test split. Recommendation: **do not pursue GODMODE as a method contribution.** Retain `godmode/` + this doc as evidence; keep SPARC's calibration-first framing, which the probes independently reconfirm (best calibrated Winkler, coverage in line with conformal target).
