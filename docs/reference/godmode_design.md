@@ -154,3 +154,140 @@ Single-seed probes A/B/C/full ran clean (`godmode/run_godmode_probes.py`, ~15 mi
 ### Takeaway
 
 Per §5 pass/fail lines, **A/B/full all FAIL and the reference already wins** → the GODMODE fusion experiment is a **negative result** for the recombination hypothesis. In accordance with §7, the load-bearing assumption is intact but unhelpful here: the current SPARC already occupies the calibration-efficiency optimum on this test split. Recommendation: **do not pursue GODMODE as a method contribution.** Retain `godmode/` + this doc as evidence; keep SPARC's calibration-first framing, which the probes independently reconfirm (best calibrated Winkler, coverage in line with conformal target).
+
+### §9b — Moves D & E probes (2026-09-13, seed 42) — both NEGATIVE
+
+Move D (Winkler-aligned training objective) and Move E (split-CQR feature-adaptive
+conformal) were the two first-principles corrections to the audited train/eval
+mismatch + flat-conformal gap. Both were run via `godmode/run_godmode_de.py`
+(`godmode_d.py`, `godmode_e.py`); verdicts in `godmode/results/godmode_de_seed42.json`.
+
+| move | cal-cov | cal-width | cal-winkler | vs reference (PM) | verdict |
+|---|---|---|---|---|---|
+| **D** ProposedMethodWinkler (λ_wink=0.05) | 87.09 | 14.717 | 18.185 | 17.524 (win), 12.906 (wid) | **FAIL** |
+| **E** split-CQR on PM reference | 86.43 | 14.594 | 20.290 | 17.524 (win), 12.906 (wid) | **FAIL** |
+| reference ProposedMethod + flat split-conformal | 91.90 | 12.906 | **17.524** | — | baseline |
+
+Interpretation:
+- **D rejects the train/eval-mismatch hypothesis at this probe.** Adding a
+  differentiable 0.10/0.90 band surrogate to the loss warped the quantile grid:
+  AQL degraded (1.264 vs 1.214) and coverage fell to 87.1%. The conformal layer
+  absorbs band offsets, so tightening the band in the objective bought nothing
+  and cost AQL + coverage. Optimizing "what we report" ≠ better calibrated width
+  when the conformal post-hoc layer already supplies it.
+- **E rejects feature-adaptive CQR on the frozen reference.** A proper split-CQR
+  (additive conformity, Romano et al. 2019) with quantile-GBM regressors on the
+  mu-congestion features was WIDER (14.59) AND lower-coverage (86.4%) than flat
+  split-conformal. The frozen PM model's native quantiles already encode the
+  conditional width; regressing conformity on 4 mu-aggregates on a ~450-row
+  calibration half overfits and widens bands. (The first CQR attempt was a
+  numeric bug — division by a near-zero predicted scale blew width to 7224; fixed
+  to additive conformity.)
+- **Both keep confirming the same structure:** SPARC (PM + flat conformal) sits at
+  the calibration optimum. The bottleneck is NOT the interval rubric (D) and NOT
+  the uniformity of conformal width (E) — it is the native conditional width of
+  the model, which PM already wins.
+
+Takeaway: two more independent first-principles corrections failed to beat the
+incumbent. Alongside GodmodeA/B/full (§9), this is now **six** recombination /
+objective / calibration variants that cannot beat `ProposedMethod` + flat
+split-conformal on calibrated-Winkler at seed 42. Recommendation stands: do not
+pursue GODMODE as a method contribution; the calibration-first framing is
+independently reconfirmed. Any further claim requires the full 5-seed comparison
+(the seed-42 margins here are not statistical evidence).
+
+### §9c — ProposedMethodMV (level/spread factorization): seed-42 false positive, 5-seed NEGATIVE
+
+MV was the first variant to produce a strictly tighter calibrated band at seed 42
+(cal-width 12.638 vs ref 12.906) while washing AQL — the first non-failure signal
+in the whole thread. The 5-seed protocol (ADR-0004) shows that was noise.
+
+5-seed means (mv vs ProposedMethod ref), significance via build_results.significance
+(runner: godmode/run_godmode_mv_5seed.py; JSON godmode/results/godmode_mv_5seed.json):
+
+| metric | MV | ref | delta | p_t | p_wilcoxon |
+|---|---|---|---|---|---|
+| aql | 1.2786 | 1.2094 | +0.069 | 0.030 | 0.062 |
+| cal_width | 13.545 | 13.399 | +0.145 | 0.803 | 0.625 |
+| cal_winkler | 18.336 | 17.702 | +0.634 | 0.064 | 0.062 |
+| cal_cov | 92.25 | 90.81 | +1.44 | 0.322 | 0.438 |
+
+Verdict: MV FAILS. The level/spread output factorization does NOT beat the
+incumbent across seeds: AQL is significantly worse (p=0.03), cal-width and
+cal-winkler are worse (non-significant), and the seed-42 width win (12.638) did
+not generalize (seed 45 → 14.71). The factorization's apparent tightness was
+within-seed variance, not signal.
+
+Takeaway (cumulative, now SEVEN tested variants — A/B/full, D, E, MV — plus the
+original Godmode recombination): **none beats ProposedMethod + flat split-conformal
+on calibrated-Winkler**, and the two that looked competitive at seed 42 (MV width,
+E hypothetically) collapsed under the 5-seed protocol. The incumbent sits at the
+calibration optimum. The metric-paradox (AQL → linear/GodmodeA; calibration → SPARC)
+is statistically supported: the "winner" is decided by which metric is reported,
+not by model quality. Any paper claim must be framed on this, not on chasing a
+better model.
+
+### §10 — α/β/γ architecture tests (2026-09-14): β and γ RULED OUT, α ALIVE-but-shallow
+
+Three targeted tests for the Solution α/β/γ architectures (test_alpha.py / beta / gamma).
+β and γ were zero-training on saved arrays; α trained the soft head at 3 λ values.
+
+**β — RULE OUT.** Nested normalized conformal (residual / mu-width-prior h(x), then
+conformalize) got WORSE: width 34.14 vs flat 12.91, winkler 38.70 vs 17.52. The
+mu-derived h(x) over-scaled the band 2.6x; KS PIT-flatness unchanged (0.000) before
+and after normalization (residual already non-uniform; h does not help). Premise
+"normalization makes residual exchangeable" is falsified.
+
+**γ — RULE OUT.** Pointwise min-width selection collapsed coverage to 64.66% (0% of
+hours picked from ProposedMethod). Root cause is the metric-paradox made measurable:
+BaselineLQR's narrow band (5.44) is UNcalibrated (64.7% coverage); ProposedMethod's
+calibrated band (12.87) is wide. Min-selection must pick the uncalibrated narrow one.
+Coverage does NOT compose under pointwise selection. This is empirical confirmation
+that width and coverage are traded off, not jointly optimizable by routing.
+
+**α — ALIVE but shallow.** Calibrated width is λ-monotone through both endpoints
+(lambda_casf 0.05->0.2: width 12.73->12.87->14.40, spread 1.67): the envelope premise
+holds. BUT the family optimum is at the LOW-λ edge: lambda=0.05 already beats the
+locked default (cal-winkler 17.459 < 17.524, cal-width 12.741 < 12.906). Because the
+family is monotone with best-at-edge, the envelope selection machinery is unnecessary:
+the gain is realized by picking the smallest usable λ, not by an envelope. Discovery:
+the reference hyperparameter lambda_casf=0.1 (ADR-0004) is a non-optimal point of the
+model's OWN family.
+
+**Cumulative (now nine tested directions):** A/B/full, MV, D, E, β, γ all negative or
+ruled-out; α is the only one alive, and only as a hyperparameter-tuning result. The
+consistent law across every test: *widening a band costs coverage; preserving coverage
+requires width* — the metric-paradox, now measured at the level of individual
+architectures, not just summary tables.
+
+### §10b — λ-family 5-seed resolution: seed-42 α "win" is noise (FAIL)
+
+The §10 α discovery (λ=0.05 beats locked λ=0.1 at seed 42: Winkler 17.459 vs 17.524,
+width 12.741 vs 12.906) was tested under the ADR-0004 5-seed + significance protocol
+(runner: godmode/run_godmode_lambda_5seed.py; JSON godmode/results/godmode_lambda_5seed.json).
+
+5-seed means, soft head ProposedMethod:
+
+| metric | λ=0.05 | λ=0.10 | delta | p_t | p_wilcoxon |
+|---|---|---|---|---|---|
+| aql | 1.2135 | 1.2094 | +0.004 | 0.414 | 0.812 |
+| cal_width | 13.717 | 13.399 | +0.317 | 0.294 | 0.312 |
+| cal_winkler | 17.772 | 17.702 | +0.070 | 0.499 | 0.812 |
+| cal_cov | 91.25 | 90.81 | +0.44 | 0.258 | 0.500 |
+
+VERDICT: FAIL — the seed-42 "win" is not replicated. λ=0.05 is WORSE on width
+(+0.317) and slightly worse on Winkler (+0.070), all insignificant (p>=0.31).
+The ONLY finding that holds is that λ has no AQL effect (delta +0.004, p_wilcoxon
+0.812) — lowering the non-crossing penalty neither helps nor hurts AQL.
+
+This is the SECOND tuning/architecture "edge" in this thread to evaporate under the
+5-seed protocol (MV width 12.638 seeded, 13.54 five-seed; now λ=0.05 width 12.741
+seeded, 13.72 five-seed). The ADR-0004 5-seed protocol is confirmed as the correct
+skeptical gate: neither seed-42-only edge was reproducible.
+
+Cumulative verdict (ten tested directions): A/B/full, MV, D, E, β, γ, and the
+λ-family all fail to beat ProposedMethod + flat split-conformal at 5-seed
+significance. Reference hyperparameters are not off-optimum in any direction that
+matters. The metric-paradox (width/coverage trade-off) is the consistent law; no
+architecture or tuning escapes it. Any paper claim must rest on that observed law,
+not on a new model.

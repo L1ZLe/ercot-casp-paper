@@ -1,0 +1,23 @@
+{
+  "test": "gamma-oracle-routing",
+  "seed": 42,
+  "rows_aligned": true,
+  "pipeline": {
+    "ProposedMethod": {
+      "cov": 86.98030634573304,
+      "width": 12.868873200361989
+    },
+    "BaselineLQR": {
+      "cov": 64.66083150984683,
+      "width": 5.438638306917782
+    }
+  },
+  "pointwise_min": {
+    "cov": 64.66083150984683,
+    "mean_width": 5.43762951190186,
+    "frac_from_proposedmethod": 0.0032822757111597373
+  },
+  "coverage_deficit_pp": 25.339168490153174,
+  "verdict": "RULE OUT",
+  "note": "Min-selection does not generally preserve marginal coverage; this tests whether it does here. ALIVE only if cov>=90%."
+}

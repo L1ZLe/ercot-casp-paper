@@ -1,0 +1,21 @@
+{
+  "test": "beta-nested-conformal",
+  "seed": 42,
+  "cal_frac": 0.5,
+  "ks_pvalue_raw": 1.3653500326125226e-12,
+  "ks_pvalue_normalized": 1.0039778037894595e-20,
+  "test_over_cal_std_raw": 0.8763129840483227,
+  "test_over_cal_std_normalized": 1.1971965678741965,
+  "flat": {
+    "cov": 91.90371991247265,
+    "width": 12.905735460026044,
+    "winkler": 17.524373477768698
+  },
+  "nested": {
+    "cov": 92.34135667396062,
+    "width": 34.14012969585163,
+    "winkler": 38.69610790944371
+  },
+  "reference_flat_width": 12.906,
+  "verdict": "RULE OUT"
+}
