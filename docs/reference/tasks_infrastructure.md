@@ -46,7 +46,7 @@ Discovery: `ls docs/reference/tasks_*.md` gives all clusters at a glance.
 
 * File: `AGENTS.md`, `README.md`, `.pre-commit-config.yaml`, `docs/docs/TODO.md`, `docs/reference/*`
 * Current: ad-hoc repo, 2 commits, no conventions
-* Target: Full framework layere on the existing CASP paper repo (ADRs + Diátaxis + task clusters + Conventional Commits + pre-commit)
+* Target: Full framework layere on the existing SPARC paper repo (ADRs + Diátaxis + task clusters + Conventional Commits + pre-commit)
 * Dependencies: none
 * Notes:
   - Implements ADR-0001 (adopt framework)

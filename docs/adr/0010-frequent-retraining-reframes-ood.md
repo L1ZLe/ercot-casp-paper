@@ -12,7 +12,7 @@ The model is **small and cheap to retrain** (8,978 params, CPU-minutes), so the 
 
 - **Cost/benefit**: if a model costs minutes to retrain, a production user retrains on each fresh data batch. Testing "train on 2025, hold on 2026 without retraining" asks the wrong question — it simulates *never* retraining, which is economically irrational for a cheap model.
 - **The decision-relevant OOD** for such a model is: does it generalize to the *next near-term window* given retraining (rolling / month-to-month)? That is where its constraint-attention + calibration advantage legitimately lives.
-- **Evidence supports it**: month-to-month Jan–May (run_monthly) CASP beats LQR on BOTH error (AQL 2.09 vs 2.30) and calibration (90.2% vs 89.6%). The harsh full-year cross-year (run_cross_year) is dominated by a full-year→half-year season/regime shift and a simple linear model — an expected stress-limit result, not the operating regime.
+- **Evidence supports it**: month-to-month Jan–May (run_monthly) SPARC beats LQR on BOTH error (AQL 2.09 vs 2.30) and calibration (90.2% vs 89.6%). The harsh full-year cross-year (run_cross_year) is dominated by a full-year→half-year season/regime shift and a simple linear model — an expected stress-limit result, not the operating regime.
 - This is consistent with ADR-0004 (CPU, reproducibility) and ADR-0005 (one paper, calibration-first): a small, cheaply-retrained, well-calibrated forecaster is the honest contribution.
 
 ## Rejected alternatives
@@ -23,6 +23,6 @@ The model is **small and cheap to retrain** (8,978 params, CPU-minutes), so the 
 
 ## Impact
 
-- The paper's OOD/limitations section leads with **frequent-retraining (monthly/rolling) OOD**, reports the monthly season windows, and states the full-year cross-year as a stress-limit limitation (CASP keeps a calibration edge there but not the point-error edge).
+- The paper's OOD/limitations section leads with **frequent-retraining (monthly/rolling) OOD**, reports the monthly season windows, and states the full-year cross-year as a stress-limit limitation (SPARC keeps a calibration edge there but not the point-error edge).
 - Spawns/extends TODO-16 (paper OOD section) and TODO-10 (M7): near-range OOD is primary; full-year cross-year is secondary/stress-limit.
 - Recorded here so future contributors do not re-introduce "train-once-generalize-forward-a-year" as the primary test for this model.

@@ -77,8 +77,8 @@ I'm in **plan mode**, so I've made no changes. When you **toggle to Act**, T1 sh
 
 also we should neutralize tihs: Limited Scope of Empirical Evaluation: The evaluation is restricted to a single point-to-point pair (HB_HUBAVG to HB_PAN) and a single year of data (2026). While the authors justify this as a "clean controlled test," top-tier ML conferences typically expect broader empirical validation to prove generalizability (e.g., multiple high-volume pairs, or out-of-distribution years with different market regimes).
 Insufficient Baseline Comparisons: The baseline suite is relatively weak for a 2026 ML conference. While LQR, MLP, LSTM, and XGBoost are included, the paper omits comparisons to modern, state-of-the-art time-series forecasting architectures (e.g., PatchTST, TimesNet, or even Informer, which is cited in the references but not evaluated). The authors explicitly acknowledge this in Section 7, but it remains a significant gap for NeurIPS/ICLR.
-Tail Behavior (Spike MAE): As noted in Section 5.3 and 7, CASP does not outperform tree-based methods on Spike MAE. Since extreme spread spikes are the primary driver of congestion risk (the very problem the paper aims to solve), this is a notable limitation that is not adequately mitigated.
-AQL Trade-off Justification: While the authors rightly defend their higher coverage, the fact that CASP’s AQL (1.335) is technically worse than LQR’s (1.315) may raise questions. A strong counter-argument would be to show that a simple Conformalized Quantile Regression (CQR) wrapper around LQR cannot easily achieve the same 87.9% coverage with a comparable interval width.
+Tail Behavior (Spike MAE): As noted in Section 5.3 and 7, SPARC does not outperform tree-based methods on Spike MAE. Since extreme spread spikes are the primary driver of congestion risk (the very problem the paper aims to solve), this is a notable limitation that is not adequately mitigated.
+AQL Trade-off Justification: While the authors rightly defend their higher coverage, the fact that SPARC’s AQL (1.335) is technically worse than LQR’s (1.315) may raise questions. A strong counter-argument would be to show that a simple Conformalized Quantile Regression (CQR) wrapper around LQR cannot easily achieve the same 87.9% coverage with a comparable interval width.
 
 
 You're asking the right question, and I'll give you a direct answer.
@@ -102,9 +102,9 @@ Here are the experiments, in priority order, with full detail.
 
 This is the win that would most move a reviewer, and you have 2024 + 2025 + 2026.
 
-**Setup:** Train CASP on 2024+2025 (or one year), test on a **held-out different year** (e.g., train 2025, test 2026). This is true out-of-distribution — a different market regime. Compare CASP vs LQR and vs MLP on the held-out year.
+**Setup:** Train SPARC on 2024+2025 (or one year), test on a **held-out different year** (e.g., train 2025, test 2026). This is true out-of-distribution — a different market regime. Compare SPARC vs LQR and vs MLP on the held-out year.
 
-**What we report:** AQL, MAE, coverage, width on the OOD year. If CASP's calibration (coverage) transfers to a year it never saw, that is a knockout argument for generalizability — the exact thing the reviewer said is missing ("multiple years/market regimes").
+**What we report:** AQL, MAE, coverage, width on the OOD year. If SPARC's calibration (coverage) transfers to a year it never saw, that is a knockout argument for generalizability — the exact thing the reviewer said is missing ("multiple years/market regimes").
 
 **Why it matters:** This directly answers W1 + #Q1 in the strongest way and it's real. Risk: results might be weaker; but even honest "coverage degrades some on OOD" is a valuable, publishable finding.
 
@@ -118,9 +118,9 @@ This is the reviewer's *exact* question: "Could a CQR wrapper around LQR reach 8
 
 **Setup:** Take the existing `BaselineLQR` median + quantile predictions. On a calibration split, compute conformal residual scores and form a corrected 90% interval (`q̂ ± score` adjusted). Evaluate coverage + width on test.
 
-**What we report:** CQR-LQR coverage + width **vs** CASP (87.9% at 14.23).
-- If CQR-LQR reaches ~90% only at much wider intervals → proves CASP's coverage isn't just "wider box."
-- If it matches at similar width → honest finding; we note LQR's weakness is over-certainty and CQR fixes it, and CASP still wins on point metrics.
+**What we report:** CQR-LQR coverage + width **vs** SPARC (87.9% at 14.23).
+- If CQR-LQR reaches ~90% only at much wider intervals → proves SPARC's coverage isn't just "wider box."
+- If it matches at similar width → honest finding; we note LQR's weakness is over-certainty and CQR fixes it, and SPARC still wins on point metrics.
 
 **Why it matters:** Removes the biggest logical attack on the calibration claim. Also means we can *delete* the limitations line "we do not compare against conformalized quantile regression."
 
@@ -132,9 +132,9 @@ This is the reviewer's *exact* question: "Could a CQR wrapper around LQR reach 8
 
 Reframes the tail story from "bad median on spikes" to "does the interval bound the extreme hours?"
 
-**Setup:** In `compute_all_metrics`, using the same spike mask (top 5% by |spread|, lines 160–168), compute **coverage of the 90% interval restricted to spike hours**. Run for CASP and LQR.
+**Setup:** In `compute_all_metrics`, using the same spike mask (top 5% by |spread|, lines 160–168), compute **coverage of the 90% interval restricted to spike hours**. Run for SPARC and LQR.
 
-**What we report:** "CASP's spike-hour coverage is X%, vs LQR Y%." For a hedger, coverage of the tail hours is the decision-relevant metric — far more than the mean MAE on spikes. If X is strong, mitigate W3. If weak, honest.
+**What we report:** "SPARC's spike-hour coverage is X%, vs LQR Y%." For a hedger, coverage of the tail hours is the decision-relevant metric — far more than the mean MAE on spikes. If X is strong, mitigate W3. If weak, honest.
 
 **Effort:** Very low. ~10 lines in an existing function.
 
@@ -155,7 +155,7 @@ This is the heaviest. The reviewer says "add TFT or N-BEATSx or PatchTST." Imple
 - Possibly new deps (though a basic multi-head attention/WaveNet can be written in torch with no new packages).
 - Modest tuning budget so it's a *fair* baseline (not adversarial).
 
-**Reality check:** This is where an honest paper for a top venue probably needs it. It's also the most effort and risk. If time is limited, a **single well-tuned Transformer/WaveNet probabilistic model** (outputs 7 quantiles like CASP) sharing the same features is enough to say "we compared against a modern deep forecaster."
+**Reality check:** This is where an honest paper for a top venue probably needs it. It's also the most effort and risk. If time is limited, a **single well-tuned Transformer/WaveNet probabilistic model** (outputs 7 quantiles like SPARC) sharing the same features is enough to say "we compared against a modern deep forecaster."
 
 **Effort:** High. 1–2 days of real work; needs care to make it fair.
 

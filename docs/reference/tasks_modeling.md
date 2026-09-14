@@ -1,6 +1,6 @@
 # Modeling & Experiments Tasks
 
-Active and completed tasks for the CASP model, features, baselines, calibration, and the reviewer-hardening plan (previously tracked as M-numbers in planning/02-TASK-PLAN.md, adopted into the framework 2026-09-03).
+Active and completed tasks for the SPARC model, features, baselines, calibration, and the reviewer-hardening plan (previously tracked as M-numbers in planning/02-TASK-PLAN.md, adopted into the framework 2026-09-03).
 
 Discovery: `ls docs/reference/tasks_*.md` gives all clusters at a glance.
 
@@ -58,7 +58,7 @@ Discovery: `ls docs/reference/tasks_*.md` gives all clusters at a glance.
 
 * File: new `code/eda_decision.py` / notebook
 * Current: not implemented; in-sample + monthly_*_5.json evidence exists (results.json, attention_analysis.json)
-* Target: figures + a short decision-relevance section; LQR framed as "lacks constraint-attention mechanism + mis-calibrated (too-narrow)", CASP as "near-nominal coverage, ~12x attention on top-μ slots"
+* Target: figures + a short decision-relevance section; LQR framed as "lacks constraint-attention mechanism + mis-calibrated (too-narrow)", SPARC as "near-nominal coverage, ~12x attention on top-μ slots"
 * Dependencies: ADR-0011, TODO-16 (paper section), M11 (attention analysis)
 * Notes: E3 is a lightweight illustration, NOT a full backtest (ADR-0005, TODO-14). Calibration is stable across seasons; error winner flips by season — do not claim best error across seasons.
 
@@ -111,7 +111,7 @@ Complete, **2026-09-03** ✅  (implementation landed in code/results/results.jso
 
 * File: `code/build_results.py` + config
 * Current: not measured
-* Target: show CASP is far smaller/faster than MLP/LSTM yet matches/beats them
+* Target: show SPARC is far smaller/faster than MLP/LSTM yet matches/beats them
 
 ### TODO-12 — Conformal quantile regression (CQR) (M8) (type: modeling)
 

@@ -1,4 +1,4 @@
-"""Locked experiment configuration for CASP.
+"""Locked experiment configuration for SPARC.
 
 Central configuration object for the ERCOT LMP-spread experiment. Extracted
 verbatim from `code/main.py` so load-bearing constants have a single home and

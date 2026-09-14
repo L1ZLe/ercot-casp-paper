@@ -7,7 +7,7 @@ Active and completed tasks live in domain-cluster files under `docs/reference/`.
 | Cluster | Domain | Coverage |
 |---|---|---|
 | [tasks_infrastructure.md](../reference/tasks_infrastructure.md) | Infrastructure & setup | Bootstrap/adoption, config, pre-commit |
-| [tasks_modeling.md](../reference/tasks_modeling.md) | Models, features, calibration | CASP model, baselines, M1–M9 plan |
+| [tasks_modeling.md](../reference/tasks_modeling.md) | Models, features, calibration | SPARC model, baselines, M1–M9 plan |
 | [tasks_paper.md](../reference/tasks_paper.md) | Paper & writing | paper.tex/final.md, figures, NeurIPS submission |
 
 ## How to use

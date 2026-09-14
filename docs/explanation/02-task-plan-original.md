@@ -1,4 +1,4 @@
-# CASP Paper — Task Plan (what we will do from now)
+# SPARC Paper — Task Plan (what we will do from now)
 
 _Owner: Sami · Created: 2026-09-03 · Target: NeurIPS / UQ-application method paper, energy-framed_
 _Tracking key: status = `[ ]` todo / `[x]` done. M-numbers are the canonical modification IDs (see 00-STRATEGY.md for the catalog, 01-WRITING-LEVERS.md for the writing angle)._
@@ -28,7 +28,7 @@ _Tracking key: status = `[ ]` todo / `[x]` done. M-numbers are the canonical mod
 ---
 
 ## M4 — Spike-hour interval coverage
-- **What:** Using the existing spike mask (top-5% |spread| hours), compute the 90%-interval **coverage restricted to spike hours** for CASP vs LQR (and all methods). Reframe the tail story from "bad median on spikes" to "does the interval *bound* the extreme hours?"
+- **What:** Using the existing spike mask (top-5% |spread| hours), compute the 90%-interval **coverage restricted to spike hours** for SPARC vs LQR (and all methods). Reframe the tail story from "bad median on spikes" to "does the interval *bound* the extreme hours?"
 - **Why:** This is the single best reframe of the spike-MAE weakness (writing lever C2); it's the decision-relevant tail-risk metric for a hedger.
 - **Code destination:** edit `code/main.py` (`compute_all_metrics`, reuses the spike mask).
 - **Status:** [ ]
@@ -40,13 +40,13 @@ _Tracking key: status = `[ ]` todo / `[x]` done. M-numbers are the canonical mod
 - **Status:** [ ]
 
 ## M6 — Efficiency table
-- **What:** Count trainable parameters and wall-clock training time per method. Show CASP is far smaller and faster than MLP/LSTM yet matches/beats on AQL and wins on calibration. Mirrors the anchor paper's efficiency thesis.
+- **What:** Count trainable parameters and wall-clock training time per method. Show SPARC is far smaller and faster than MLP/LSTM yet matches/beats on AQL and wins on calibration. Mirrors the anchor paper's efficiency thesis.
 - **Why:** NeurIPS reviewers reward this; it's a win even where raw error doesn't favor us.
 - **Code destination:** **new** `code/efficiency.py`.
 - **Status:** [ ]
 
 ## M7 — Cross-year / out-of-distribution generalization (REQUIRED for NeurIPS)
-- **What:** Train on 2024+2025 (or one year), test on a held-out different year (e.g., 2025→2026) — a true OOD market-regime shift. Compare CASP vs LQR and vs MLP on the held-out year. Point the split at the test year via config.
+- **What:** Train on 2024+2025 (or one year), test on a held-out different year (e.g., 2025→2026) — a true OOD market-regime shift. Compare SPARC vs LQR and vs MLP on the held-out year. Point the split at the test year via config.
 - **Why:** Directly answers the NeurIPS "multiple years / market regimes" breadth requirement — the highest-value breadth experiment, and the data is already yours (2024/2025/2026).
 - **Code destination:** edit `code/config` + `code/data.py` (year ramp) + extend `run_generalization_experiment` to years.
 - **Guardrail (critical):** define split/train/validate→test BEFORE running; no retuning on the test year (else look-ahead kills it — "do not pre-tune on the test year" is the review-killing failure mode).
@@ -54,13 +54,13 @@ _Tracking key: status = `[ ]` todo / `[x]` done. M-numbers are the canonical mod
 ---
 
 ## M8 — Conformal quantile regression around LQR (CQR/about LQR)
-- **What:** Wrap `BaselineLQR` with a conformal calibration step: on a calibration split, compute residual scores and form corrected 90% intervals; evaluate coverage + width on test. Compare vs CASP (87.9% at IW 14.23).
-- **Why:** Answers the reviewer's exact question — "could LQR + conformal wrap reach 90% coverage easily?" Either it only does so at far wider width (proves CASP's calibration is real, not a wider box) or it matches (a finding to report). Closes THE logical hole; lets us delete the conformal limitation line.
+- **What:** Wrap `BaselineLQR` with a conformal calibration step: on a calibration split, compute residual scores and form corrected 90% intervals; evaluate coverage + width on test. Compare vs SPARC (87.9% at IW 14.23).
+- **Why:** Answers the reviewer's exact question — "could LQR + conformal wrap reach 90% coverage easily?" Either it only does so at far wider width (proves SPARC's calibration is real, not a wider box) or it matches (a finding to report). Closes THE logical hole; lets us delete the conformal limitation line.
 - **Code destination:** **new** `code/conformal.py`.
 - **Status:** [ ]
 
 ## M9 — Modern deep learning baseline (MANDATORY for NeurIPS)
-- **What:** Implement ONE modern, state-of-the-art-ish time-series forecaster that outputs 7 quantiles like CASP: a simple **Transformer/WaveNet** (no new deps — write in torch) or **PatchTST**. Reuse the existing LSTM sequence loader. Give it a fair tuning budget so it's not adversarial.
+- **What:** Implement ONE modern, state-of-the-art-ish time-series forecaster that outputs 7 quantiles like SPARC: a simple **Transformer/WaveNet** (no new deps — write in torch) or **PatchTST**. Reuse the existing LSTM sequence loader. Give it a fair tuning budget so it's not adversarial.
 - **Why:** Informer is cited but never run; the absence of any modern deep baseline is the single biggest NeurIPS gap and a guaranteed reject if left open.
 - **Code destination:** edit `code/models.py` (add class) + `code/main.py` (register baseline) + `code/data.py` (sequence input, already exists for LSTM).
 - **Verb:** honest, fair baseline (shared features, similar capacity/tuning).

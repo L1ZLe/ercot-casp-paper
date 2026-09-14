@@ -1,4 +1,4 @@
-# CASP Paper — Catalog of Writing Levers
+# SPARC Paper — Catalog of Writing Levers
 
 _Owner: Sami · Created: 2026-09-03 · Target: NeurIPS / UQ-application method paper, energy-framed_
 

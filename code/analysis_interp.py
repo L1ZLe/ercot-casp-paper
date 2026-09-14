@@ -93,7 +93,7 @@ def main():
 
     # Figure
     fig, ax = plt.subplots(figsize=(7, 5))
-    ax.plot(bins_mean, conc_mean, marker="o", label="CASP attention on top-3 μ slots")
+    ax.plot(bins_mean, conc_mean, marker="o", label="SPARC attention on top-3 μ slots")
     ax.axhline(
         uniform,
         ls="--",

@@ -1,4 +1,4 @@
-# Code Package for CASP: Constraint-Aware Spread Predictor for ERCOT Day-Ahead LMP Spreads
+# Code Package for SPARC: Constraint-Aware Spread Predictor for ERCOT Day-Ahead LMP Spreads
 
 ## Description
 This directory contains the experiment project used for the paper.

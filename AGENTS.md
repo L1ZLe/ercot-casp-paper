@@ -288,7 +288,7 @@ Without this, the ADR is a dangling claim — the link checker can't catch a mis
 
 ### Project description
 
-**CASP: Constraint-Aware Spread Predictor for ERCOT Day-Ahead LMP Spreads.** A NeurIPS-2025-format paper + reproducible experiment code predicting ERCOT day-ahead locational-marginal-price (LMP) spreads with quantile (interval) uncertainty, including baselines and ablations.
+**SPARC: Constraint-Aware Spread Predictor for ERCOT Day-Ahead LMP Spreads.** A NeurIPS-2025-format paper + reproducible experiment code predicting ERCOT day-ahead locational-marginal-price (LMP) spreads with quantile (interval) uncertainty, including baselines and ablations.
 
 ### Current phase
 
@@ -308,10 +308,10 @@ Post-submission cleanup → converting an ad-hoc repo into the project-hygiene f
 
 - **LMP** — Locational Marginal Price ($/MWh) at an ERCOT settlement point.
 - **Spread** — `src_price − snk_price` for a source–sink settlement-point pair.
-- **CASP** — Constraint-Aware Spread Predictor, the proposed model.
+- **SPARC** — Constraint-Aware Spread Predictor, the proposed model.
 - **AQL** — Average Quantile Loss; pure average pinball across the quantile grid, the headline metric (ADR-0004).
 - **LA-CASF** — Loss-Augmented Constraint-Aware Spread Forecasting penalty; a *training* objective, never conflated with metrics (ADR-0004).
-- **AblationWOMu / WOID / WOTemporal / WOPathEmbed / WOAttention / WOEnergyCancel** — ablated variants of CASP (each drops one component).
+- **AblationWOMu / WOID / WOTemporal / WOPathEmbed / WOAttention / WOEnergyCancel** — ablated variants of SPARC (each drops one component).
 - **BaselineLQR / MLP / LSTM / XGBoost / RF / Naive1 / Naive2** — baseline models.
 
 ### Project-specific "never do"

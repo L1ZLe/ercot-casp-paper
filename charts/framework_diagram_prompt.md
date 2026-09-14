@@ -1,10 +1,10 @@
 # Framework Diagram Prompt
 
-**Paper**: CASP: Constraint-Aware Spread Predictor for ERCOT Day-Ahead LMP Spreads
+**Paper**: SPARC: Constraint-Aware Spread Predictor for ERCOT Day-Ahead LMP Spreads
 
 ## Image Generation Prompt
 
-Create a clean academic architecture diagram for a neural forecasting model titled "CASP: Constraint-Aware Spread Predictor." The illustration flows left-to-right across three distinct processing stages, rendered in a flat vector-art style on a white background (#FFFFFF) with subtle drop shadows on all modules.
+Create a clean academic architecture diagram for a neural forecasting model titled "SPARC: Constraint-Aware Spread Predictor." The illustration flows left-to-right across three distinct processing stages, rendered in a flat vector-art style on a white background (#FFFFFF) with subtle drop shadows on all modules.
 
 **Color palette:** Primary modules in muted blue #4477AA, learned embeddings and attention components in teal #44AA99, temporal features in soft purple #AA3377, target and loss components in warm accent #CCBB44, arrows and connectors in dark grey #555555.
 

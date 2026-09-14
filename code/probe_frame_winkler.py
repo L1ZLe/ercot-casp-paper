@@ -1,8 +1,8 @@
 """probe_frame_winkler.py - Exp 1 (Sol 3 frame-falsifiability).
 
-Tests whether CASP's calibration edge is frame-dependent. Runs ProposedMethod
+Tests whether SPARC's calibration edge is frame-dependent. Runs ProposedMethod
 and LQR on a DELIBERATELY unfavorable window (calendar-aligned cross-year, or
-a season not headlined) and reports the width-fair Winkler + coverage. If CASP's
+a season not headlined) and reports the width-fair Winkler + coverage. If SPARC's
 Winkler is still better than LQR's on the unfavorable frame, the edge survives
 the frame choice (Sol 3 alive); if it flips, the near-range frame is doing the
 work (Sol 3 dead).

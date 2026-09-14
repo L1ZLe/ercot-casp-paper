@@ -6,7 +6,7 @@
 - **Source**: this repo's AGENTS.md project description; planning decision log
 
 ## Decision
-Publish a single CASP paper targeting a NeurIPS / UQ-application track, framed around energy/national-interest significance (ERCOT grid, FERC Order 881, renewable integration), with calibration/UQ as the headline contribution. There is exactly one paper; the trading backtest is excluded from it.
+Publish a single SPARC paper targeting a NeurIPS / UQ-application track, framed around energy/national-interest significance (ERCOT grid, FERC Order 881, renewable integration), with calibration/UQ as the headline contribution. There is exactly one paper; the trading backtest is excluded from it.
 
 ## Rationale
 - The experiments, data, and narrative are a single contribution - they are not two papers. Early "two directions" were rankings of which metric to lead with, not separate publications.

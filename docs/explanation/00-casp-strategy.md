@@ -1,4 +1,4 @@
-# CASP Paper — Strategy & State
+# SPARC Paper — Strategy & State
 
 _Owner: Sami · Repo: `/home/l1zle/L1zle` · Created: 2026-09-03 · Mode: Act (approved)_
 
@@ -17,11 +17,11 @@ _Owner: Sami · Repo: `/home/l1zle/L1zle` · Created: 2026-09-03 · Mode: Act (a
 ## 1. Why this is one connected story (not two papers)
 
 ```
-ONE model (CASP: constraint-attention + non-crossing quantile head)
+ONE model (SPARC: constraint-attention + non-crossing quantile head)
    |
    |  ONE dataset (real ERCOT 2026, 14 methods x 5 seeds)
    v
-ONE contribution: "CASP is the reliably-calibrated forecaster for ERCOT PTP spreads"
+ONE contribution: "SPARC is the reliably-calibrated forecaster for ERCOT PTP spreads"
    |
    |- Baselines (LQR, MLP, LSTM, XGB, RF)     -> evidence set
    |- Ablations                               -> WHY it works (division of labor)
@@ -75,7 +75,7 @@ Every item defends the SAME contribution. Nothing here splits into a second pape
 |---|---|---|---|---|
 | AblationWOPathEmbed | 1.299 | 3.159 | 10.04 | 81.4 |
 | **BaselineLQR** | **1.313** | 3.258 | 10.09 | 72.8 |
-| **ProposedMethod (CASP)** | 1.343 | **3.207** | 9.930 | **89.1** |
+| **ProposedMethod (SPARC)** | 1.343 | **3.207** | 9.930 | **89.1** |
 | AblationWOAttention | 1.344 | 3.321 | 10.15 | 77.9 |
 | BaselineLSTM | 1.558 | 3.970 | 10.56 | 78.4 |
 | BaselineMLP | 1.728 | 4.213 | 8.24 | 85.7 |
@@ -83,10 +83,10 @@ Every item defends the SAME contribution. Nothing here splits into a second pape
 | BaselineRF | 2.425 | 6.087 | 7.32 | 46.0 |
 
 ### The honest reads
-- CASP beats EVERY deep baseline on AQL. **Circle.**
-- CASP has the best calibration (89.1 vs 72.8 LQR, 85.7 MLP). **Circle.**
-- LQR edges CASP on AQL (1.313 vs 1.343) — honest, reframed.
-- Trees/MLP beat CASP on spike_mae — honest limitation; answer with spike-hour *coverage* (reframe).
+- SPARC beats EVERY deep baseline on AQL. **Circle.**
+- SPARC has the best calibration (89.1 vs 72.8 LQR, 85.7 MLP). **Circle.**
+- LQR edges SPARC on AQL (1.313 vs 1.343) — honest, reframed.
+- Trees/MLP beat SPARC on spike_mae — honest limitation; answer with spike-hour *coverage* (reframe).
 - WOPathEmbed (1.299) beats the flagship (1.343) on AQL — handle openly, never hide.
 
 ---
