@@ -1,7 +1,7 @@
 flowchart TD
 subgraph G_D2["D2 - SCED, the anchor, our move"]
     SCED["SCED optimization<br/>solved every hour"] --> OUT["Outputs simultaneously<br/>LMPs, binding constraints, shadow prices"]
-    OUT --> IDENTITY["LMP identity is EXACT at the optimum<br/>LMP_i = λ + Σₖ SFₖ,ᵢ · μₖ<br/>λ, SF, μ are the primal and dual<br/>quantities of the optimization"]
+    OUT --> IDENTITY["LMP identity is EXACT at the optimum<br/>LMP_i = λ + Σ_k SF_k,i · μ_k<br/>λ, SF, μ are the primal and dual<br/>quantities of the optimization"]
     IDENTITY --> ENDOG["But they are ENDOGENOUS<br/>defined only by solving the clearing<br/>no closed-form function from raw inputs"]
     ENDOG --> MUST["Rule is real, but NOT transcribable<br/>so LEARN the exposure weights"]
     OUT --> DSF_D2["ΔSF is not published for each<br/>source-destination pair<br/>depends on topology + operating point"]

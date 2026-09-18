@@ -3,7 +3,7 @@ subgraph G_M0["M0 - Master spine"]
     S0["S0 - Definition<br/>SPARC: constraint-aware probabilistic<br/>forecaster of ERCOT day-ahead spreads"] --> S1
     S1["S1 - How prices form<br/>LMP = energy + congestion<br/>prices differ by location"] --> S2
     S2["S2 - Shadow prices (μ) drive location prices<br/>which constraints bind, and their μ,<br/>are the mechanism → model the market"] --> S3
-    S3["S3 - The spread and ΔSF<br/>energy cancels → Σ ΔSF · μ"] --> S4
+    S3["S3 - The spread and ΔSF<br/>energy cancels → sum_k ΔSF_k · μ_k"] --> S4
     S4["S4 - SCED: no transcribable formula<br/>λ, SF, μ are optimization outputs"] --> S5
     S5["S5 - Anchor (Austria) + our move<br/>they embed a rule; we do output-conditioning"] --> S6
     S6["S6 - The model<br/>constraints → attention → quantiles<br/>soft head"] --> S7

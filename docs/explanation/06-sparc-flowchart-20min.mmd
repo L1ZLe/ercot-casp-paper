@@ -3,7 +3,7 @@ flowchart TD
     S0["S0 - Definition<br/>SPARC: constraint-aware probabilistic<br/>forecaster of ERCOT day-ahead spreads"] --> S1
     S1["S1 - How prices form<br/>LMP = energy + congestion<br/>prices differ by location"] --> S2
     S2["S2 - Shadow prices (μ) drive location prices<br/>which constraints bind, and their μ,<br/>are the mechanism → model the market"] --> S3
-    S3["S3 - The spread and ΔSF<br/>energy cancels → Σ ΔSF · μ"] --> S4
+    S3["S3 - The spread and ΔSF<br/>energy cancels → sum_k ΔSF_k · μ_k"] --> S4
     S4["S4 - SCED: no transcribable formula<br/>λ, SF, μ are optimization outputs"] --> S5
     S5["S5 - Anchor (Austria) + our move<br/>they embed a rule; we do output-conditioning"] --> S6
     S6["S6 - The model<br/>constraints → attention → quantiles<br/>soft head"] --> S7
@@ -28,16 +28,16 @@ flowchart TD
   end
 
   subgraph G_D1["D1 - Market, shadow price, spread"]
-    M["ERCOT day-ahead, nodal"] --> P1["Nodal price<br/>LMPᵢ = λ + Σₖ SFₖ,ᵢ · μₖ"]
+    M["ERCOT day-ahead, nodal"] --> P1["Nodal price<br/>LMP_i = λ + Σ_k SF_k,i · μ_k"]
     P1 --> P2["Energy component λ<br/>same at every node"]
-    P1 --> P3["Congestion component<br/>Σ SF · μ, location-specific"]
-    P3 --> SP["Shadow price μₖ<br/>μₖ = marginal cost of relaxing<br/>constraint k by 1 MW"]
+    P1 --> P3["Congestion component<br/>Σ_k SF · μ, location-specific"]
+    P3 --> SP["Shadow price μ_k<br/>μ_k = marginal cost of relaxing<br/>constraint k by 1 MW"]
     SP --> EX_D1["Example: road at capacity<br/>one more MW costs +$20<br/>therefore μ = $20/MWh"]
     SP --> TOPK["Selection: per hour, per constraint<br/>sort by its own μ descending, take top 50<br/>binding only, snapshot lagged one hour"]
-    P1 --> SPREAD["Path spread<br/>ΔLMPₛ→d = LMP_d − LMP_s<br/>= Σₖ (SFₖ,d − SFₖ,s) · μₖ<br/>= Σₖ ΔSFₖ · μₖ"]
+    P1 --> SPREAD["Path spread<br/>ΔLMP_s→d = LMP_d - LMP_s<br/>= Σ_k (SF_k,d - SF_k,s) · μ_k<br/>= Σ_k ΔSF_k · μ_k"]
     SPREAD --> C1["λ cancels exactly<br/>spread = pure congestion differential"]
-    SPREAD --> DSF_D1["Differential shift factor<br/>ΔSFₖ = SFₖ,d − SFₖ,s<br/>Example: 0.6 − 0.1 = 0.5<br/>If μₖ = $20/MWh, contribution = $10/MWh"]
-    DSF_D1 --> Z["If ΔSFₖ = 0, the constraint affects both ends equally<br/>Contribution to the spread = 0"]
+    SPREAD --> DSF_D1["Differential shift factor<br/>ΔSF_k = SF_k,d - SF_k,s<br/>Example: 0.6 - 0.1 = 0.5<br/>If μ_k = $20/MWh, contribution = $10/MWh"]
+    DSF_D1 --> Z["If ΔSF_k = 0, the constraint affects both ends equally<br/>Contribution to the spread = 0"]
     SP --> ARG["WHY THIS IS THE RIGHT ASSUMPTION<br/>μ is the market's own signal of<br/>where and how badly the grid is constrained"]
     ARG --> DOM["Needs domain understanding,<br/>not just sending prices to ML. And that is shown by our results"]
     ARG --> LINK["Outcome link (canonical raw, 5-seed)<br/>price-only models: good center, bad risk<br/>LQR coverage 71.1%, crosses 32.5%<br/>SPARC 88.8%, crosses 3.0%"]
@@ -45,7 +45,7 @@ flowchart TD
 
   subgraph G_D2["D2 - SCED, the anchor, our move"]
     SCED["SCED optimization<br/>solved every hour"] --> OUT["Outputs simultaneously<br/>LMPs, binding constraints, shadow prices"]
-    OUT --> IDENTITY["LMP identity is EXACT at the optimum<br/>LMP_i = λ + Σₖ SFₖ,ᵢ · μₖ<br/>λ, SF, μ are the primal and dual<br/>quantities of the optimization"]
+    OUT --> IDENTITY["LMP identity is EXACT at the optimum<br/>LMP_i = λ + Σ_k SF_k,i · μ_k<br/>λ, SF, μ are the primal and dual<br/>quantities of the optimization"]
     IDENTITY --> ENDOG["But they are ENDOGENOUS<br/>defined only by solving the clearing<br/>no closed-form function from raw inputs"]
     ENDOG --> MUST["Rule is real, but NOT transcribable<br/>so LEARN the exposure weights"]
     OUT --> DSF_D2["ΔSF is not published for each<br/>source-destination pair<br/>depends on topology + operating point"]
@@ -67,9 +67,9 @@ flowchart TD
     MU["Shadow-price pathway<br/>per-slot keys and values<br/>the VALUES carry the shadow-price (μ) signal"] --> ATTN_D3
     TEMP["Temporal encoder"] --> ATTN_D3
     Q["Query = the path asking<br/>which constraints matter for me"] --> ATTN_D3
-    ATTN_D3["Constraint attention<br/>aₖ = exp(scoreₖ) / Σⱼ exp(scoreⱼ)<br/>Σₖ aₖ = 1<br/>aₖ = learned relative exposure weight<br/>(plays the role of ΔSF: positive + normalized,<br/>so it captures relative magnitude)"] --> HEAD
-    ATTN_D3 --> BLEND["Weighted blend of the value signals<br/>≈ Σₖ aₖ · μₖ<br/>same form as Σₖ ΔSFₖ · μₖ"]
-    HEAD["Quantile head<br/>soft flat head + crossing penalty<br/>raw AQCR 2.98% vs LQR 32.5%, MLP 13.6%<br/>(hard head is 0.00% by construction)"] --> LOSS["Training loss<br/>ℒ = Σₜ Στ ρτ(yₜ − q̂τ,t) + λ · crossing penalty<br/>ρτ(u) = u · (τ − I[u &lt; 0])<br/>penalty is training-only, never a metric"]
+    ATTN_D3["Constraint attention<br/>a_k = exp(score_k) / Σ_j exp(score_j)<br/>Σ_k a_k = 1<br/>a_k = learned relative exposure weight<br/>(plays the role of ΔSF: positive + normalized,<br/>so it captures relative magnitude)"] --> HEAD
+    ATTN_D3 --> BLEND["Weighted blend of the value signals<br/>≈ Σ_k a_k · μ_k<br/>same form as Σ_k ΔSF_k · μ_k"]
+    HEAD["Quantile head<br/>soft flat head + crossing penalty<br/>raw AQCR 2.98% vs LQR 32.5%, MLP 13.6%<br/>(hard head is 0.00% by construction)"] --> LOSS["Training loss<br/>L = Σ_t Σ_τ ρ_τ(y_t - q_hat_τ,t) + λ · crossing penalty<br/>ρ_τ(u) = u · (τ - I[u &lt; 0])<br/>penalty is training-only, never a metric"]
     HEAD --> HARD2["Hard (hierarchical) head tested on SPARC<br/>calibrated Winkler 18.72 vs soft 17.70 → kept soft"]
     LAG["Lagged-spread encoder"] --> HEAD
 
@@ -82,14 +82,14 @@ flowchart TD
   end
 
   subgraph G_D4["D4 - Metrics"]
-    EX_D4["Running example<br/>Observed value: y = 10<br/>90% interval: [L, U] = [−5, 15]<br/>Median forecast: q₀.₅ = 8"] --> AQL
+    EX_D4["Running example<br/>Observed value: y = 10<br/>90% interval: [L, U] = [-5, 15]<br/>Median forecast: q_0.5 = 8"] --> AQL
     EX_D4 --> COV
     EX_D4 --> WINK
     EX_D4 --> AQCR
-    AQL["AQL / pinball loss<br/>ρτ(y − qτ) = (y − qτ) · (τ − I[y &lt; qτ])<br/>At τ = 0.5: error 2 → loss 1.0<br/>At τ = 0.9: error 2 → loss 1.8"]
-    COV["Empirical interval coverage<br/>Coverage = (1/N) · Σₜ I[Lₜ ≤ yₜ ≤ Uₜ]<br/>For a 90% interval: Lₜ = q₀.₁ and Uₜ = q₀.₉<br/>88 of 100 hours inside = 88%"]
-    WINK["Winkler score for a 90% interval<br/>W = U − L, if L ≤ y ≤ U<br/>W = U − L + 20(L − y), if y &lt; L<br/>W = U − L + 20(y − U), if y &gt; U"]
-    AQCR["Adjacent quantile crossing rate<br/>AQCR = crossings / adjacent quantile pairs<br/>A crossing occurs when qτⱼ &gt; qτⱼ₊₁<br/>SPARC 2.98% vs LQR 32.54%"]
+    AQL["AQL / pinball loss<br/>ρ_τ(y - q_τ) = (y - q_τ) · (τ - I[y &lt; q_τ])<br/>At τ = 0.5: error 2 → loss 1.0<br/>At τ = 0.9: error 2 → loss 1.8"]
+    COV["Empirical interval coverage<br/>Coverage = (1/N) · Σ_t I[L_t ≤ y_t ≤ U_t]<br/>For a 90% interval: L_t = q_0.1 and U_t = q_0.9<br/>88 of 100 hours inside = 88%"]
+    WINK["Winkler score for a 90% interval<br/>W = U - L, if L ≤ y ≤ U<br/>W = U - L + 20(L - y), if y &lt; L<br/>W = U - L + 20(y - U), if y &gt; U"]
+    AQCR["Adjacent quantile crossing rate<br/>AQCR = crossings / adjacent quantile pairs<br/>A crossing occurs when q_τ,j &gt; q_τ,j+1<br/>SPARC 2.98% vs LQR 32.54%"]
     AQL --> PARADOX["THE METRIC-PARADOX<br/>AQL is middle-dominated → LQR wins it<br/>Winkler taxes the band edges → SPARC wins it<br/>the reported winner depends on the metric"]
     COV --> TRADE["Why it matters for trading<br/>a band claiming 90% but holding 71%<br/>leaves 29% of hours under-hedged<br/>low mean error does NOT rescue bad intervals"]
     PARADOX --> TRADE
@@ -100,7 +100,7 @@ flowchart TD
     RESULTS["Raw results, primary pair<br/>SPARC coverage 88.82, Winkler 18.43, AQL 1.209, AQCR 2.98<br/>LQR 71.09, 24.64, 1.171, 32.54<br/>MLP 82.98, 23.07, 1.420<br/>LSTM 78.61, Transformer 79.80, XGB 79.23, RF 34.97"] --> WINS["Findings<br/>best calibrated; AQL parity with LQR (p=0.077, n.s.)<br/>beats every deep net on AQL/MAE<br/>coverage significant vs LQR: t=7.79, p=0.0015<br/>8,978 params = 7-9x smaller"]
     RESULTS --> CAL["Calibrated (flat split-conformal)<br/>SPARC cov 90.81, width 13.40, Winkler 17.70 (best)<br/>LQR cov 91.68, width 12.69, Winkler 20.01<br/>MLP cov 94.14, width 17.05, Winkler 19.86<br/>= coverage equalized; SPARC wins width-efficiency"]
     RESULTS --> HONEST["Honest negatives<br/>LQR wins raw AQL (1.171 vs 1.209, n.s.)<br/>CRPS parity; one ablation (no path embed, AQL 1.180) edges us<br/>scope: central 90% band, extreme events out of scope"]
-    PROTO --> ABL["Ablations (raw coverage; calibrated Winkler)<br/>No attention: 88.82 → 76.35, AQL flat 1.209 → 1.217<br/>= attention is the load-bearing calibration mechanism<br/>No identity −7.31pp vs no-μ −0.51pp = WHICH binds beats HOW large<br/>No temporal: AQL 1.640 = temporal drives point error<br/>No lags ≈ full (89.45) = lagged history redundant"]
+    PROTO --> ABL["Ablations (raw coverage; calibrated Winkler)<br/>No attention: 88.82 → 76.35, AQL flat 1.209 → 1.217<br/>= attention is the load-bearing calibration mechanism<br/>No identity -7.31pp vs no-μ -0.51pp = WHICH binds beats HOW large<br/>No temporal: AQL 1.640 = temporal drives point error<br/>No lags ≈ full (89.45) = lagged history redundant"]
     ABL --> ATTN_D5["Mechanism<br/>attention 0.19-0.26 (mean 0.23) on top-3 μ slots<br/>about 12x the uniform 0.020; peaks 0.257 at max μ 84.8"]
   end
 
