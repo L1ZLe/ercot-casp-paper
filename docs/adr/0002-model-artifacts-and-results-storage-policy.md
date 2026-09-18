@@ -1,7 +1,7 @@
 # 2. Model artifacts and results storage policy
 
 - **Date**: 2026-09-03
-- **Status**: Accepted
+- **Status**: Superseded by ADR-0012
 - **Source**: [config.py](../../config.py) (`results_dir`), [code/results/README.md](../../code/results/README.md)
 
 ## Decision
