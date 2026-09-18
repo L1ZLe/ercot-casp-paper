@@ -1,0 +1,205 @@
+flowchart TD
+  subgraph G_M0["M0 - Master spine (full)"]
+    S0["S0 - Definition<br/>SPARC: constraint-aware probabilistic<br/>forecaster of ERCOT day-ahead spreads"] --> S1
+    S1["S1 - How prices form<br/>LMP = energy + congestion<br/>prices differ by location"] --> S2
+    S2["S2 - Shadow prices (μ) drive location prices<br/>which constraints bind, and their μ,<br/>are the mechanism → model the market"] --> S3
+    S3["S3 - The spread and ΔSF<br/>energy cancels → Σ_k ΔSF_k · μ_k"] --> S4
+    S4["S4 - SCED: no transcribable formula<br/>λ, SF, μ are optimization outputs"] --> S5
+    S5["S5 - Anchor (Austria): rule-embedding<br/>they embed a settlement formula"] --> S6
+    S6["S6 - Our move: output-conditioning<br/>constraint-aware, NOT rule-informed"] --> S7
+    S7["S7 - The model<br/>constraints → attention → quantiles<br/>soft head; why attention; why mean-pool"] --> S8
+    S8["S8 - Metrics and why<br/>coverage, Winkler, AQL, AQCR, CRPS, PIT<br/>the metric-paradox"] --> S9
+    S9["S9 - Protocol<br/>5 seeds, chronological split,<br/>what an ablation is"] --> S10
+    S10["S10 - Findings<br/>best calibration, AQL parity,<br/>beats deep nets, coherence, efficiency"] --> S11
+    S11["S11 - Mechanism<br/>ablation table + attention concentration"] --> S12
+    S12["S12 - Generalization<br/>3 pairs, near-range OOD, cross-year, conformal"] --> S13
+    S13["S13 - God model<br/>fusion idea + 10 experiments + verdict"] --> S14
+    S14["S14 - First principles<br/>5 reasons nothing beat SPARC"] --> S15
+    S15["S15 - Decision and limits<br/>decision tree + honest scope"]
+
+    S0 -.-> D1["D1 - Market + shadow + ΔSF"]
+    S1 -.-> D1
+    S2 -.-> D1
+    S3 -.-> D1
+    S4 -.-> D2["D2 - SCED + anchor + our move"]
+    S5 -.-> D2
+    S6 -.-> D2
+    S7 -.-> D3["D3 - The model"]
+    S8 -.-> D4["D4 - Metrics"]
+    S9 -.-> D5["D5 - Protocol + findings + mechanism"]
+    S10 -.-> D5
+    S11 -.-> D5
+    S12 -.-> D6["D6 - Generalization"]
+    S13 -.-> D7["D7 - God model"]
+    S14 -.-> D8["D8 - First principles + decision + limits"]
+    S15 -.-> D8
+    S0 -.-> C["C - Concept index"]
+    S15 -.-> R["R - Evidence index"]
+  end
+
+  subgraph G_D1["D1 - Market, shadow price, spread"]
+    M["ERCOT day-ahead, nodal"] --> P1["Nodal price<br/>LMP_i = λ + Σ_k SF_k,i · μ_k"]
+    P1 --> P2["Energy component λ<br/>same at every node"]
+    P1 --> P3["Congestion component<br/>Σ_k SF · μ, location-specific"]
+    P3 --> SP["Shadow price μ_k<br/>μ_k = marginal cost of relaxing<br/>constraint k by 1 MW"]
+    SP --> EX_D1["Example: road at capacity<br/>one more MW costs +$20<br/>therefore μ = $20/MWh"]
+    SP --> TOPK["Selection: per hour, per constraint<br/>sort by its own μ descending, take top 50<br/>binding only, snapshot lagged one hour"]
+    P1 --> SPREAD["Path spread<br/>ΔLMP_s→d = LMP_d - LMP_s<br/>= Σ_k (SF_k,d - SF_k,s) · μ_k<br/>= Σ_k ΔSF_k · μ_k"]
+    SPREAD --> C1["λ cancels exactly<br/>spread = pure congestion differential"]
+    SPREAD --> DSF_D1["Differential shift factor<br/>ΔSF_k = SF_k,d - SF_k,s<br/>Example: 0.6 - 0.1 = 0.5<br/>If μ_k = $20/MWh, contribution = $10/MWh"]
+    DSF_D1 --> Z["If ΔSF_k = 0, the constraint affects both ends equally<br/>Contribution to the spread = 0"]
+    SP --> ARG["WHY THIS IS THE RIGHT ASSUMPTION<br/>μ is the market's own signal of<br/>where and how badly the grid is constrained"]
+    ARG --> DOM["Needs domain understanding,<br/>not just sending prices to ML. And that is shown by our results"]
+    ARG --> LINK["Outcome link (canonical raw, 5-seed)<br/>price-only models: good center, bad risk<br/>LQR coverage 71.1%, crosses 32.5%<br/>SPARC 88.8%, crosses 3.0%"]
+  end
+
+  subgraph G_D2["D2 - SCED, the anchor, our move"]
+    SCED["SCED optimization<br/>solved every hour"] --> OUT["Outputs simultaneously<br/>LMPs, binding constraints, shadow prices"]
+    OUT --> IDENTITY["LMP identity is EXACT at the optimum<br/>LMP_i = λ + Σ_k SF_k,i · μ_k<br/>λ, SF, μ are the primal and dual<br/>quantities of the optimization"]
+    IDENTITY --> ENDOG["But they are ENDOGENOUS<br/>defined only by solving the clearing<br/>no closed-form function from raw inputs"]
+    ENDOG --> RESOLVE["Computing them means re-solving SCED<br/>a large complementarity problem,<br/>not a differentiable layer"]
+    OUT --> DSF_D2["ΔSF is not published for each<br/>source-destination pair<br/>depends on topology + operating point"]
+    RESOLVE --> MUST["Rule is real, but NOT transcribable<br/>so LEARN the exposure weights"]
+    DSF_D2 --> MUST
+
+    ANCHOR["Anchor: Yu et al., Austria<br/>MRINN"] --> RULE["Known piecewise settlement formula<br/>embedded as differentiable layers<br/>= RULE-EMBEDDING"]
+    RULE --> HARD["Hard hierarchical head<br/>non-crossing by construction, AQCR = 0"]
+    RULE --> GAPS["Never reports coverage, Winkler, CRPS, PIT"]
+
+    MUST --> MOVE["Our move: condition on the PAST published clearing outputs<br/>most recent snapshot strictly before the target hour<br/>the target hour's own μ is NOT used —<br/>it exists only after that hour clears, so using it would leak"]
+    MOVE --> LEARN["What is given: the lagged μ (a published output)<br/>What is learned: ΔSF, as attention weights"]
+    MOVE --> NOT["SPARC is constraint-aware<br/>NOT market-rule-informed"]
+    MOVE --> WHICH["Which rule do we embed? NONE<br/>the identity is used as structure"]
+    MOVE --> QRESOLVE["Q: couldn't you differentiate through SCED?<br/>In principle yes, but it needs a full, maintainable<br/>ERCOT SCED model with complementarity — a different,<br/>much larger program. The clearing outputs are already published."]
+  end
+
+  subgraph G_D3["D3 - The model"]
+    IN["Inputs<br/>top-50 constraint slots (μ, identity, kV, flow)<br/>temporal Fourier, 3 lagged spreads, path embedding"] --> ID
+    IN --> MU
+    ID["Identity pathway<br/>MEAN-POOLED over binding constraints<br/>fixed size because K varies hourly<br/>captures WHICH set of corridors binds"] --> ATTN_D3
+    MU["Shadow-price pathway<br/>per-slot keys and values<br/>the VALUES carry the shadow-price (μ) signal"] --> ATTN_D3
+    TEMP["Temporal encoder"] --> ATTN_D3
+    Q["Query = the path asking<br/>which constraints matter for me"] --> ATTN_D3
+    ATTN_D3["Constraint attention<br/>a_k = exp(score_k) / Σ_j exp(score_j)<br/>Σ_k a_k = 1<br/>a_k = learned relative exposure weight<br/>(plays the role of ΔSF: positive + normalized,<br/>so it captures relative magnitude; sign and scale<br/>are absorbed downstream)"] --> HEAD
+    ATTN_D3 --> BLEND["Weighted blend of the value signals<br/>≈ Σ_k a_k · μ_k<br/>same form as Σ_k ΔSF_k · μ_k"]
+    HEAD["Quantile head<br/>soft flat head + crossing penalty<br/>raw AQCR 2.98% vs LQR 32.5%, MLP 13.6%<br/>(hard head is 0.00% by construction)"] --> LOSS["Training loss<br/>L = Σ_t Σ_τ ρ_τ(y_t - q_hat_τ,t) + λ · crossing penalty<br/>ρ_τ(u) = u · (τ - I[u &lt; 0])<br/>penalty is training-only, never a metric"]
+    HEAD --> HARD2["Hard (hierarchical) head tested on SPARC<br/>calibrated Winkler 18.72 vs soft 17.70 → kept soft"]
+    LAG["Lagged-spread encoder"] --> HEAD
+
+    ATTN_D3 --> WHY_ROOT["Why attention, not something else?"]
+    WHY_ROOT --> A1["Raw concatenation of the constraints<br/>REJECTED<br/>the number of binding constraints changes every hour<br/>the network needs a fixed-size input"]
+    WHY_ROOT --> A2["Mean-pool everything<br/>REJECTED<br/>treats every binding line as equally important for every path<br/>destroys selectivity: a line near the sink should matter more than one far away"]
+    WHY_ROOT --> A3["MLP over the constraint features<br/>REJECTED<br/>no explicit weight per constraint<br/>cannot tell you which line drove the forecast"]
+    WHY_ROOT --> A4["RNN or Transformer over the constraint set<br/>REJECTED<br/>a set has no order; first and last are interchangeable<br/>imposes an order that does not exist"]
+    WHY_ROOT --> WIN["ATTENTION — CHOSEN<br/>handles a variable-size set<br/>gives a per-path weight to each constraint<br/>order-free (permutation-invariant)<br/>the weights play the role of learned ΔSF<br/>→ interpretable by construction"]
+    WHYID["Why mean pooling (identity pathway)<br/>K varies each hour → need a fixed-size vector<br/>order-independent and robust<br/>captures WHICH set of corridors binds"]
+    OTHERS["What others do, and why it is wrong for this problem<br/>feed the price as a time series, never see the constraint set<br/>= model the shadow, not the cause"]
+    WHYID --> OTHERS
+  end
+
+  subgraph G_D4["D4 - Metrics"]
+    EX_D4["Running example<br/>Observed value: y = 10<br/>90% interval: [L, U] = [-5, 15]<br/>Median forecast: q_0.5 = 8"] --> AQL
+    EX_D4 --> COV
+    EX_D4 --> WINK
+    EX_D4 --> AQCR
+    AQL["AQL / pinball loss<br/>ρ_τ(y - q_τ) = (y - q_τ) · (τ - I[y &lt; q_τ])<br/>At τ = 0.5: error 2 → loss 1.0<br/>At τ = 0.9: error 2 → loss 1.8<br/>standard quantile loss; the anchor's headline"]
+    COV["Empirical interval coverage<br/>Coverage = (1/N) · Σ_t I[L_t ≤ y_t ≤ U_t]<br/>For a 90% interval: L_t = q_0.1 and U_t = q_0.9<br/>88 of 100 hours inside = 88%<br/>THE decision metric: a desk sizes from the band"]
+    WINK["Winkler score for a 90% interval<br/>W = U - L, if L ≤ y ≤ U<br/>W = U - L + 20(L - y), if y &lt; L<br/>W = U - L + 20(y - U), if y &gt; U<br/>rewards covering AND narrow; cannot be gamed with a wide box"]
+    AQCR["Adjacent quantile crossing rate<br/>AQCR = crossings / adjacent quantile pairs<br/>A crossing occurs when q_τ,j &gt; q_τ,j+1<br/>SPARC 2.98% vs LQR 32.54%"]
+    CRPS["CRPS<br/>proper score on the whole predictive CDF<br/>rewards calibration + sharpness"]
+    PIT["PIT / KS<br/>actual 10, forecast CDF 0.5 → PIT 0.5<br/>uniform = calibrated; U-shape = too narrow; cap = too wide<br/>EVERY method fails uniformity → comparative claim only"]
+    EFF["Efficiency<br/>8,978 params vs MLP 64,456 / Transformer 78,536<br/>enables frequent retraining"]
+    SIG["Significance<br/>5 seeds → paired t / Wilcoxon / sign<br/>coverage vs LQR: t = 7.79, p = 0.0015"]
+    QUANT["Concrete quantile example<br/>point: spread = 8 dollars, hides the risk<br/>quantiles: median 8, 90% band [-5, 15]<br/>if spread realizes 30, the point forecast was useless<br/>0.90 tells you the worst plausible case<br/>weather analogy: 25C vs 18-27C with 90% chance<br/>0.10 and 0.90 = the band a desk sizes from"]
+    AQL --> PARADOX["THE METRIC-PARADOX<br/>AQL is middle-dominated → LQR wins it<br/>Winkler taxes the band edges → SPARC wins it<br/>the reported winner is an artifact of the metric"]
+    COV --> TRADE["Why calibration matters for trading<br/>a band claiming 90% but holding 71%<br/>leaves 29% of hours under-hedged<br/>losses live in the missed hours, not the mean error<br/>low mean error does NOT rescue bad intervals"]
+    PARADOX --> TRADE
+    WINK --> TAILNOTE["No tail contradiction<br/>Winkler tails = the 0.10 and 0.90 edges of the NORMAL band<br/>spike hours = top 5% EXTREME events, far beyond 0.90<br/>different things; extreme events are OUT OF SCOPE here"]
+  end
+
+  subgraph G_D5["D5 - Protocol, findings, mechanism (canonical 5-seed)"]
+    PROTO["Protocol<br/>CPU, chronological 70-15-15<br/>5 seeds 42-46, 7 quantiles<br/>AQL = pure pinball; penalty training-only"] --> WHY5["Why 5 seeds<br/>one run can be lucky<br/>5 seeds give mean ± std and paired tests<br/>a single-seed win is never a claim"]
+    PROTO --> ABLWHAT["What an ablation is<br/>remove ONE component, retrain, measure the drop<br/>isolates that component's contribution"]
+    PROTO --> FIELD["Field<br/>SPARC + 8 baselines + 6 ablations"]
+    FIELD --> RESULTS["Raw results, primary pair<br/>SPARC coverage 88.82, Winkler 18.43, AQL 1.209, AQCR 2.98<br/>LQR 71.09, 24.64, 1.171, 32.54<br/>MLP 82.98, 23.07, 1.420<br/>LSTM 78.61, Transformer 79.80, XGB 79.23, RF 34.97"]
+    RESULTS --> WINS["Findings<br/>1 best calibrated, beats linear AND deep<br/>2 AQL parity with LQR (p=0.077, n.s.), beats deep nets<br/>3 best coherence vs linear/trees (2.98% vs 32.5%/13.6%/37.0%)<br/>4 7-9x more efficient (8,978 params)<br/>5 significant: coverage t=7.79, p=0.0015"]
+    RESULTS --> CAL["Calibrated (flat split-conformal)<br/>SPARC cov 90.81, width 13.40, Winkler 17.70 (best)<br/>LQR cov 91.68, width 12.69, Winkler 20.01<br/>MLP cov 94.14, width 17.05, Winkler 19.86<br/>= coverage equalized; SPARC wins width-efficiency"]
+    RESULTS --> HONEST["Honest negatives<br/>LQR wins raw AQL (1.171 vs 1.209, n.s.)<br/>CRPS parity (1.910 vs 2.007)<br/>one ablation (no path embed, AQL 1.180) edges us<br/>scope: central 90% band, extreme events out of scope"]
+    ABLWHAT --> ABLTAB["Ablations (raw coverage; calibrated Winkler)<br/>No attention: 88.82 → 76.35, AQL flat 1.209 → 1.217<br/>= attention is the load-bearing calibration mechanism<br/>No identity -7.31pp vs no-μ -0.51pp = WHICH binds beats HOW large<br/>No temporal: AQL 1.640 = temporal drives point error<br/>No lags ≈ full (89.45) = lagged history redundant"]
+    ABLTAB --> ATTN_D5["Mechanism evidence<br/>attention 0.19-0.26 (mean 0.23) on top-3 μ slots<br/>about 12x the uniform 0.020<br/>peaks 0.257 at the highest-μ bin (max μ 84.8)"]
+  end
+
+  subgraph G_D6["D6 - Generalization"]
+    PAIRS["What 3 pairs means exactly<br/>1 primary HB_HUBAVG to HB_PAN: full comparison, 5 seeds<br/>2 probes: HB_NORTH 86.57%, HB_WEST 90.98%: proposed model only<br/>claim = calibration consistency, not a ranked comparison on 3"]
+    PAIRS --> SCOPENOTE["Probe AQL caution<br/>NORTH AQL 0.62, WEST 0.90 are LOWER than primary 1.21<br/>but AQL is in $/MWh and scale-dependent: those pairs have smaller spreads<br/>baselines were not run there → no error win claim"]
+    PAIRS --> SEAS["Near-range OOD (canonical monthly Jan-May 2026, 2-seed)<br/>SPARC coverage 90.2% vs LQR 89.7%; SPARC also wins AQL (2.094 vs 2.295)<br/>electricity is strongly seasonal; which corridors bind changes with the season<br/>so season-to-season is the decision-relevant test<br/>NOTE: the 3-window 87.8/92.7/62.5 numbers are NOT in the canonical build"]
+    PAIRS --> XY["Cross-year full 2025→2026 (2-seed): stress limit, not the operating regime<br/>SPARC coverage 72.2% vs LQR 59.6%; LQR wins AQL (1.065 vs 1.183)<br/>8,978 params → retrain frequently<br/>train-once-generalize-a-year is the wrong question"]
+    PAIRS --> CONF["Conformal defense — the result<br/>wrap LQR in flat split-conformal → coverage 91.7%, width 12.69<br/>but calibrated Winkler 20.01, still worse than SPARC 17.70<br/>→ conformal equalizes coverage but not width-efficiency<br/>→ the edge is INTRINSIC to the architecture"]
+    PAIRS --> SENS["Sensitivity (2-seed)<br/>lag sets 24 / 24-48 / 24-48-168<br/>lead 1, 2, 4, 12 hours → coverage stable 89.5%<br/>so the result is not an artifact of one lag/lead choice"]
+  end
+
+  subgraph G_D7["D7 - The God model (10 experiments)"]
+    IDEA["The idea<br/>every model wins exactly one axis<br/>linear wins average error, persistence wins MAE<br/>physics rule is a free prior; monotone head rescues coherence<br/>conformal guarantees coverage<br/>so fuse the winners into one model"] --> ARCH["The fusion design<br/>linear spine + attention residual + physics bias<br/>+ monotone head + conformal<br/>scored on calibrated Winkler, not AQL"]
+    ARCH --> VERDICT["Verdict: NEGATIVE<br/>10 tested directions, none beats SPARC<br/>(godmode conformal; SPARC baseline 17.52)"]
+    VERDICT --> E1["1 linear spine + market prior + conformal<br/>AQL 1.159 (best), Winkler 22.35 FAIL<br/>sharp but loses the calibration"]
+    VERDICT --> E2["2 time inside the attention query<br/>Winkler 18.36 vs SPARC 17.52 FAIL<br/>fixing the architecture did not improve calibration"]
+    VERDICT --> E3["3 identity-only, drop μ magnitude<br/>Winkler 18.37, passes its own line but above SPARC<br/>simpler is nearly as good, no gain"]
+    VERDICT --> E4["4 full additive fusion<br/>Winkler 18.86 FAIL<br/>complexity without a calibration gain"]
+    VERDICT --> E5["5 train on the metric you report<br/>coverage 87.1, AQL 1.264, Winkler 18.19 FAIL<br/>conformal already absorbs band offsets; warps the grid"]
+    VERDICT --> E6["6 feature-adaptive conformal<br/>width 14.59, coverage 86.4, Winkler 20.29 FAIL<br/>native quantiles already encode conditional width"]
+    VERDICT --> E7["7 level/spread factorization<br/>seed-42 better, 5-seed AQL 1.2786 vs 1.2094 p=0.030 FAIL<br/>the seed-42 win was noise"]
+    VERDICT --> E8["8 nested normalized conformal<br/>width 34.14, Winkler 38.70 RULE OUT<br/>over-scaled the band; residuals already non-uniform"]
+    VERDICT --> E9["9 pointwise min-width routing<br/>coverage collapsed to 64.66% RULE OUT<br/>the narrower band is the uncalibrated one"]
+    VERDICT --> E10["10 tune the crossing penalty<br/>seed-42 better, 5-seed 17.772 vs 17.702 FAIL<br/>no AQL effect"]
+    VERDICT --> OTHERS7["Other paper's rule and head (canonical conformal)<br/>market-rule-embedded 18.83, hier version 19.54<br/>both worse than SPARC 17.70<br/>hard head on SPARC 18.72 vs soft 17.70"]
+  end
+
+  subgraph G_D8["D8 - First principles, decision, limits"]
+    FP["First principles: why nothing beat SPARC"] --> F1["1 target is low-rank in the constraint dimension<br/>only SPARC projects onto it explicitly"]
+    FP --> F2["2 identity causes magnitude<br/>binding is the event; μ is downstream"]
+    FP --> F3["3 AQL and Winkler are different functionals<br/>middle vs band edges"]
+    FP --> F4["4 conformal equalizes coverage<br/>so the contest is width-at-coverage"]
+    FP --> F5["5 width/coverage coupling is a law here<br/>routing proved it: coverage collapsed to 64.7%"]
+    FP --> DEC["Decision tree<br/>PRIMARY: calibration + coherence + efficiency + OOD<br/>SAFE FLOOR: calibration + parity + efficiency<br/>BEAT-EVERYTHING: tested as Godmode, failed<br/>FORBIDDEN: hide LQR / compare only to weak baselines"]
+    DEC --> LIM["Honest limitations<br/>no method is PIT-uniform<br/>AQL and CRPS are parity, not superiority<br/>cross-year error edge does not hold<br/>seasonal 3-window claim not in the canonical build<br/>one market, one year, one headline pair<br/>scope: central 90% band; extreme tail events out of scope"]
+  end
+
+  subgraph G_C["C - Concept index (retrieval layer)"]
+    CC1["C-LMP - Locational marginal price"] --> CC2["C-SHADOW - Shadow price μ"]
+    CC2 --> CC3["C-SF - Shift factor / ΔSF"]
+    CC3 --> CC4["C-BIND - Binding constraint"]
+    CC4 --> CC5["C-SCED - Security-constrained economic dispatch"]
+    CC5 --> CC6["C-QUANT - Quantile forecast"]
+    CC6 --> CC7["C-PINBALL - Pinball loss / AQL"]
+    CC7 --> CC8["C-COV - Interval coverage"]
+    CC8 --> CC9["C-WINK - Winkler score"]
+    CC9 --> CC10["C-CRPS - CRPS"]
+    CC10 --> CC11["C-AQCR - Quantile crossing rate"]
+    CC11 --> CC12["C-PIT - PIT / KS calibration"]
+    CC12 --> CC13["C-CONF - Conformal recalibration"]
+    CC13 --> CC14["C-ATTN - Attention query/key/value"]
+    CC14 --> CC15["C-POOL - Mean pooling"]
+    CC15 --> CC16["C-ABL - Ablation methodology"]
+    CC16 --> CC17["C-SIG - 5-seed significance"]
+    CC17 --> CC18["C-PARADOX - The metric-paradox"]
+    CC18 --> CC19["C-EFF - Parameter efficiency"]
+    CC19 --> CC20["C-3PAIR - The 3-pair protocol"]
+    CC20 --> CC21["C-GOD - Godmode fusion"]
+  end
+
+  subgraph G_R["R - Evidence index (numbers + sources)"]
+    R1["R-COV - 88.82 vs 71.09 raw; 90.81 vs 91.68 calibrated"] --> SRC1["code/results/results.json (metrics + conformal)"]
+    R2["R-WINK - 18.43 vs 24.64 raw; 17.70 vs 20.01 calibrated"] --> SRC1
+    R3["R-AQL - 1.209 vs 1.171, p=0.077 n.s."] --> SRC1
+    R4["R-AQCR - 2.98 vs 32.54"] --> SRC1
+    R5["R-SIG - coverage t=7.79, p=0.0015"] --> SRC1
+    R6["R-ABL - 88.82 to 76.35; no-ID -7.31pp vs no-μ -0.51pp"] --> SRC1
+    R7["R-ATTN - 0.19-0.26 (mean 0.23) vs uniform 0.020; 0.257 extreme"] --> SRC1
+    R8["R-PARAM - 8,978 vs MLP 64,456 / Transformer 78,536"] --> SRC1
+    R9["R-3PAIR - NORTH 86.57 / WEST 90.98"] --> SRC1
+    R10["R-MONTH - Jan-May 2026: 90.2 vs 89.7 (2-seed)"] --> SRC1
+    R11["R-XYEAR - full 2025->2026: 72.2 vs 59.6 (2-seed)"] --> SRC1
+    R12["R-CONF - LQR 91.7 cov / 12.69 width / 20.01 Winkler vs SPARC 90.81 / 13.40 / 17.70"] --> SRC1
+    R13["R-SENS - coverage 89.5 across lags/leads (2-seed)"] --> SRC1
+    R14["R-GOD - 10 directions, SPARC 17.52 baseline"] --> SRC2["godmode/results/*.json"]
+  end

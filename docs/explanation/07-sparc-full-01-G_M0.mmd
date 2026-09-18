@@ -1,0 +1,38 @@
+flowchart TD
+subgraph G_M0["M0 - Master spine (full)"]
+    S0["S0 - Definition<br/>SPARC: constraint-aware probabilistic<br/>forecaster of ERCOT day-ahead spreads"] --> S1
+    S1["S1 - How prices form<br/>LMP = energy + congestion<br/>prices differ by location"] --> S2
+    S2["S2 - Shadow prices (μ) drive location prices<br/>which constraints bind, and their μ,<br/>are the mechanism → model the market"] --> S3
+    S3["S3 - The spread and ΔSF<br/>energy cancels → Σ_k ΔSF_k · μ_k"] --> S4
+    S4["S4 - SCED: no transcribable formula<br/>λ, SF, μ are optimization outputs"] --> S5
+    S5["S5 - Anchor (Austria): rule-embedding<br/>they embed a settlement formula"] --> S6
+    S6["S6 - Our move: output-conditioning<br/>constraint-aware, NOT rule-informed"] --> S7
+    S7["S7 - The model<br/>constraints → attention → quantiles<br/>soft head; why attention; why mean-pool"] --> S8
+    S8["S8 - Metrics and why<br/>coverage, Winkler, AQL, AQCR, CRPS, PIT<br/>the metric-paradox"] --> S9
+    S9["S9 - Protocol<br/>5 seeds, chronological split,<br/>what an ablation is"] --> S10
+    S10["S10 - Findings<br/>best calibration, AQL parity,<br/>beats deep nets, coherence, efficiency"] --> S11
+    S11["S11 - Mechanism<br/>ablation table + attention concentration"] --> S12
+    S12["S12 - Generalization<br/>3 pairs, near-range OOD, cross-year, conformal"] --> S13
+    S13["S13 - God model<br/>fusion idea + 10 experiments + verdict"] --> S14
+    S14["S14 - First principles<br/>5 reasons nothing beat SPARC"] --> S15
+    S15["S15 - Decision and limits<br/>decision tree + honest scope"]
+
+    S0 -.-> D1["D1 - Market + shadow + ΔSF"]
+    S1 -.-> D1
+    S2 -.-> D1
+    S3 -.-> D1
+    S4 -.-> D2["D2 - SCED + anchor + our move"]
+    S5 -.-> D2
+    S6 -.-> D2
+    S7 -.-> D3["D3 - The model"]
+    S8 -.-> D4["D4 - Metrics"]
+    S9 -.-> D5["D5 - Protocol + findings + mechanism"]
+    S10 -.-> D5
+    S11 -.-> D5
+    S12 -.-> D6["D6 - Generalization"]
+    S13 -.-> D7["D7 - God model"]
+    S14 -.-> D8["D8 - First principles + decision + limits"]
+    S15 -.-> D8
+    S0 -.-> C["C - Concept index"]
+    S15 -.-> R["R - Evidence index"]
+  end

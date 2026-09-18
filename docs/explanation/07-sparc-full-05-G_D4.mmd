@@ -1,0 +1,20 @@
+flowchart TD
+subgraph G_D4["D4 - Metrics"]
+    EX_D4["Running example<br/>Observed value: y = 10<br/>90% interval: [L, U] = [-5, 15]<br/>Median forecast: q_0.5 = 8"] --> AQL
+    EX_D4 --> COV
+    EX_D4 --> WINK
+    EX_D4 --> AQCR
+    AQL["AQL / pinball loss<br/>ρ_τ(y - q_τ) = (y - q_τ) · (τ - I[y &lt; q_τ])<br/>At τ = 0.5: error 2 → loss 1.0<br/>At τ = 0.9: error 2 → loss 1.8<br/>standard quantile loss; the anchor's headline"]
+    COV["Empirical interval coverage<br/>Coverage = (1/N) · Σ_t I[L_t ≤ y_t ≤ U_t]<br/>For a 90% interval: L_t = q_0.1 and U_t = q_0.9<br/>88 of 100 hours inside = 88%<br/>THE decision metric: a desk sizes from the band"]
+    WINK["Winkler score for a 90% interval<br/>W = U - L, if L ≤ y ≤ U<br/>W = U - L + 20(L - y), if y &lt; L<br/>W = U - L + 20(y - U), if y &gt; U<br/>rewards covering AND narrow; cannot be gamed with a wide box"]
+    AQCR["Adjacent quantile crossing rate<br/>AQCR = crossings / adjacent quantile pairs<br/>A crossing occurs when q_τ,j &gt; q_τ,j+1<br/>SPARC 2.98% vs LQR 32.54%"]
+    CRPS["CRPS<br/>proper score on the whole predictive CDF<br/>rewards calibration + sharpness"]
+    PIT["PIT / KS<br/>actual 10, forecast CDF 0.5 → PIT 0.5<br/>uniform = calibrated; U-shape = too narrow; cap = too wide<br/>EVERY method fails uniformity → comparative claim only"]
+    EFF["Efficiency<br/>8,978 params vs MLP 64,456 / Transformer 78,536<br/>enables frequent retraining"]
+    SIG["Significance<br/>5 seeds → paired t / Wilcoxon / sign<br/>coverage vs LQR: t = 7.79, p = 0.0015"]
+    QUANT["Concrete quantile example<br/>point: spread = 8 dollars, hides the risk<br/>quantiles: median 8, 90% band [-5, 15]<br/>if spread realizes 30, the point forecast was useless<br/>0.90 tells you the worst plausible case<br/>weather analogy: 25C vs 18-27C with 90% chance<br/>0.10 and 0.90 = the band a desk sizes from"]
+    AQL --> PARADOX["THE METRIC-PARADOX<br/>AQL is middle-dominated → LQR wins it<br/>Winkler taxes the band edges → SPARC wins it<br/>the reported winner is an artifact of the metric"]
+    COV --> TRADE["Why calibration matters for trading<br/>a band claiming 90% but holding 71%<br/>leaves 29% of hours under-hedged<br/>losses live in the missed hours, not the mean error<br/>low mean error does NOT rescue bad intervals"]
+    PARADOX --> TRADE
+    WINK --> TAILNOTE["No tail contradiction<br/>Winkler tails = the 0.10 and 0.90 edges of the NORMAL band<br/>spike hours = top 5% EXTREME events, far beyond 0.90<br/>different things; extreme events are OUT OF SCOPE here"]
+  end

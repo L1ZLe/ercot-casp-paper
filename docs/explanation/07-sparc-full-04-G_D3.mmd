@@ -1,0 +1,24 @@
+flowchart TD
+subgraph G_D3["D3 - The model"]
+    IN["Inputs<br/>top-50 constraint slots (μ, identity, kV, flow)<br/>temporal Fourier, 3 lagged spreads, path embedding"] --> ID
+    IN --> MU
+    ID["Identity pathway<br/>MEAN-POOLED over binding constraints<br/>fixed size because K varies hourly<br/>captures WHICH set of corridors binds"] --> ATTN_D3
+    MU["Shadow-price pathway<br/>per-slot keys and values<br/>the VALUES carry the shadow-price (μ) signal"] --> ATTN_D3
+    TEMP["Temporal encoder"] --> ATTN_D3
+    Q["Query = the path asking<br/>which constraints matter for me"] --> ATTN_D3
+    ATTN_D3["Constraint attention<br/>a_k = exp(score_k) / Σ_j exp(score_j)<br/>Σ_k a_k = 1<br/>a_k = learned relative exposure weight<br/>(plays the role of ΔSF: positive + normalized,<br/>so it captures relative magnitude; sign and scale<br/>are absorbed downstream)"] --> HEAD
+    ATTN_D3 --> BLEND["Weighted blend of the value signals<br/>≈ Σ_k a_k · μ_k<br/>same form as Σ_k ΔSF_k · μ_k"]
+    HEAD["Quantile head<br/>soft flat head + crossing penalty<br/>raw AQCR 2.98% vs LQR 32.5%, MLP 13.6%<br/>(hard head is 0.00% by construction)"] --> LOSS["Training loss<br/>L = Σ_t Σ_τ ρ_τ(y_t - q_hat_τ,t) + λ · crossing penalty<br/>ρ_τ(u) = u · (τ - I[u &lt; 0])<br/>penalty is training-only, never a metric"]
+    HEAD --> HARD2["Hard (hierarchical) head tested on SPARC<br/>calibrated Winkler 18.72 vs soft 17.70 → kept soft"]
+    LAG["Lagged-spread encoder"] --> HEAD
+
+    ATTN_D3 --> WHY_ROOT["Why attention, not something else?"]
+    WHY_ROOT --> A1["Raw concatenation of the constraints<br/>REJECTED<br/>the number of binding constraints changes every hour<br/>the network needs a fixed-size input"]
+    WHY_ROOT --> A2["Mean-pool everything<br/>REJECTED<br/>treats every binding line as equally important for every path<br/>destroys selectivity: a line near the sink should matter more than one far away"]
+    WHY_ROOT --> A3["MLP over the constraint features<br/>REJECTED<br/>no explicit weight per constraint<br/>cannot tell you which line drove the forecast"]
+    WHY_ROOT --> A4["RNN or Transformer over the constraint set<br/>REJECTED<br/>a set has no order; first and last are interchangeable<br/>imposes an order that does not exist"]
+    WHY_ROOT --> WIN["ATTENTION — CHOSEN<br/>handles a variable-size set<br/>gives a per-path weight to each constraint<br/>order-free (permutation-invariant)<br/>the weights play the role of learned ΔSF<br/>→ interpretable by construction"]
+    WHYID["Why mean pooling (identity pathway)<br/>K varies each hour → need a fixed-size vector<br/>order-independent and robust<br/>captures WHICH set of corridors binds"]
+    OTHERS["What others do, and why it is wrong for this problem<br/>feed the price as a time series, never see the constraint set<br/>= model the shadow, not the cause"]
+    WHYID --> OTHERS
+  end

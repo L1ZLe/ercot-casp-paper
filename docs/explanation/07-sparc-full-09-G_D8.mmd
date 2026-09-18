@@ -1,0 +1,10 @@
+flowchart TD
+subgraph G_D8["D8 - First principles, decision, limits"]
+    FP["First principles: why nothing beat SPARC"] --> F1["1 target is low-rank in the constraint dimension<br/>only SPARC projects onto it explicitly"]
+    FP --> F2["2 identity causes magnitude<br/>binding is the event; μ is downstream"]
+    FP --> F3["3 AQL and Winkler are different functionals<br/>middle vs band edges"]
+    FP --> F4["4 conformal equalizes coverage<br/>so the contest is width-at-coverage"]
+    FP --> F5["5 width/coverage coupling is a law here<br/>routing proved it: coverage collapsed to 64.7%"]
+    FP --> DEC["Decision tree<br/>PRIMARY: calibration + coherence + efficiency + OOD<br/>SAFE FLOOR: calibration + parity + efficiency<br/>BEAT-EVERYTHING: tested as Godmode, failed<br/>FORBIDDEN: hide LQR / compare only to weak baselines"]
+    DEC --> LIM["Honest limitations<br/>no method is PIT-uniform<br/>AQL and CRPS are parity, not superiority<br/>cross-year error edge does not hold<br/>seasonal 3-window claim not in the canonical build<br/>one market, one year, one headline pair<br/>scope: central 90% band; extreme tail events out of scope"]
+  end
