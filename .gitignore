@@ -5,8 +5,9 @@
 *.log
 *.out
 
-# Built paper PDF (source lives in AIstats research paper/paper.tex)
+# Built paper PDF (source lives in the paper folder's paper.tex)
 AIstats research paper/paper.pdf
+AIstats research paper (outdated)/paper.pdf
 
 # Python
 __pycache__/

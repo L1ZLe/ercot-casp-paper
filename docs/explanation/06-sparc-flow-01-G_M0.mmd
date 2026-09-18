@@ -1,0 +1,28 @@
+flowchart TD
+subgraph G_M0["M0 - Master spine"]
+    S0["S0 - Definition<br/>SPARC: constraint-aware probabilistic<br/>forecaster of ERCOT day-ahead spreads"] --> S1
+    S1["S1 - How prices form<br/>LMP = energy + congestion<br/>prices differ by location"] --> S2
+    S2["S2 - Shadow prices (μ) drive location prices<br/>which constraints bind, and their μ,<br/>are the mechanism → model the market"] --> S3
+    S3["S3 - The spread and ΔSF<br/>energy cancels → Σ ΔSF · μ"] --> S4
+    S4["S4 - SCED: no transcribable formula<br/>λ, SF, μ are optimization outputs"] --> S5
+    S5["S5 - Anchor (Austria) + our move<br/>they embed a rule; we do output-conditioning"] --> S6
+    S6["S6 - The model<br/>constraints → attention → quantiles<br/>soft head"] --> S7
+    S7["S7 - Metrics<br/>coverage, Winkler, AQL, AQCR<br/>the metric-paradox"] --> S8
+    S8["S8 - Results and mechanism<br/>best calibrated; attention is load-bearing"] --> S9
+    S9["S9 - Generalization<br/>3 pairs, near-range OOD, conformal"] --> S10
+    S10["S10 - God model<br/>10 fusion attempts, all fail"] --> S11
+    S11["S11 - Decision and limits<br/>calibration-first; honest scope"]
+
+    S0 -.-> D1["D1 - Market + shadow + ΔSF"]
+    S1 -.-> D1
+    S2 -.-> D1
+    S3 -.-> D1
+    S4 -.-> D2["D2 - SCED + anchor + our move"]
+    S5 -.-> D2
+    S6 -.-> D3["D3 - The model"]
+    S7 -.-> D4["D4 - Metrics"]
+    S8 -.-> D5["D5 - Results + mechanism"]
+    S9 -.-> D6["D6 - Generalization + God + limits"]
+    S10 -.-> D6
+    S11 -.-> D6
+  end

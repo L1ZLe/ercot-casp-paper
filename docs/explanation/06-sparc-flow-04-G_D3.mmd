@@ -1,0 +1,21 @@
+flowchart TD
+subgraph G_D3["D3 - The model"]
+    IN["Inputs<br/>top-50 constraint slots (μ, identity, kV, flow)<br/>temporal Fourier, 3 lagged spreads, path embedding"] --> ID
+    IN --> MU
+    ID["Identity pathway<br/>MEAN-POOLED over binding constraints<br/>fixed size because K varies hourly<br/>captures WHICH set of corridors binds"] --> ATTN_D3
+    MU["Shadow-price pathway<br/>per-slot keys and values<br/>the VALUES carry the shadow-price (μ) signal"] --> ATTN_D3
+    TEMP["Temporal encoder"] --> ATTN_D3
+    Q["Query = the path asking<br/>which constraints matter for me"] --> ATTN_D3
+    ATTN_D3["Constraint attention<br/>aₖ = exp(scoreₖ) / Σⱼ exp(scoreⱼ)<br/>Σₖ aₖ = 1<br/>aₖ = learned relative exposure weight<br/>(plays the role of ΔSF: positive + normalized,<br/>so it captures relative magnitude)"] --> HEAD
+    ATTN_D3 --> BLEND["Weighted blend of the value signals<br/>≈ Σₖ aₖ · μₖ<br/>same form as Σₖ ΔSFₖ · μₖ"]
+    HEAD["Quantile head<br/>soft flat head + crossing penalty<br/>raw AQCR 2.98% vs LQR 32.5%, MLP 13.6%<br/>(hard head is 0.00% by construction)"] --> LOSS["Training loss<br/>ℒ = Σₜ Στ ρτ(yₜ − q̂τ,t) + λ · crossing penalty<br/>ρτ(u) = u · (τ − I[u &lt; 0])<br/>penalty is training-only, never a metric"]
+    HEAD --> HARD2["Hard (hierarchical) head tested on SPARC<br/>calibrated Winkler 18.72 vs soft 17.70 → kept soft"]
+    LAG["Lagged-spread encoder"] --> HEAD
+
+    ATTN_D3 --> WHY_ROOT["Why attention, not something else?"]
+    WHY_ROOT --> A1["Raw concatenation of the constraints<br/>REJECTED<br/>the number of binding constraints changes every hour<br/>the network needs a fixed-size input"]
+    WHY_ROOT --> A2["Mean-pool everything<br/>REJECTED<br/>treats every binding line as equally important for every path<br/>destroys selectivity: a line near the sink should matter more than one far away"]
+    WHY_ROOT --> A3["MLP over the constraint features<br/>REJECTED<br/>no explicit weight per constraint<br/>cannot tell you which line drove the forecast"]
+    WHY_ROOT --> A4["RNN or Transformer over the constraint set<br/>REJECTED<br/>a set has no order; first and last are interchangeable<br/>imposes an order that does not exist"]
+    WHY_ROOT --> WIN["ATTENTION — CHOSEN<br/>handles a variable-size set<br/>gives a per-path weight to each constraint<br/>order-free (permutation-invariant)<br/>the weights play the role of learned ΔSF<br/>→ interpretable by construction"]
+  end

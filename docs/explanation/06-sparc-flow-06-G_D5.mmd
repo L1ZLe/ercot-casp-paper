@@ -1,0 +1,9 @@
+flowchart TD
+subgraph G_D5["D5 - Results and mechanism (canonical 5-seed)"]
+    PROTO["Protocol<br/>CPU, chronological 70-15-15<br/>5 seeds 42-46, pure-pinball AQL<br/>ablation = remove one part, retrain, measure the drop"] --> RESULTS
+    RESULTS["Raw results, primary pair<br/>SPARC coverage 88.82, Winkler 18.43, AQL 1.209, AQCR 2.98<br/>LQR 71.09, 24.64, 1.171, 32.54<br/>MLP 82.98, 23.07, 1.420<br/>LSTM 78.61, Transformer 79.80, XGB 79.23, RF 34.97"] --> WINS["Findings<br/>best calibrated; AQL parity with LQR (p=0.077, n.s.)<br/>beats every deep net on AQL/MAE<br/>coverage significant vs LQR: t=7.79, p=0.0015<br/>8,978 params = 7-9x smaller"]
+    RESULTS --> CAL["Calibrated (flat split-conformal)<br/>SPARC cov 90.81, width 13.40, Winkler 17.70 (best)<br/>LQR cov 91.68, width 12.69, Winkler 20.01<br/>MLP cov 94.14, width 17.05, Winkler 19.86<br/>= coverage equalized; SPARC wins width-efficiency"]
+    RESULTS --> HONEST["Honest negatives<br/>LQR wins raw AQL (1.171 vs 1.209, n.s.)<br/>CRPS parity; one ablation (no path embed, AQL 1.180) edges us<br/>scope: central 90% band, extreme events out of scope"]
+    PROTO --> ABL["Ablations (raw coverage; calibrated Winkler)<br/>No attention: 88.82 → 76.35, AQL flat 1.209 → 1.217<br/>= attention is the load-bearing calibration mechanism<br/>No identity −7.31pp vs no-μ −0.51pp = WHICH binds beats HOW large<br/>No temporal: AQL 1.640 = temporal drives point error<br/>No lags ≈ full (89.45) = lagged history redundant"]
+    ABL --> ATTN_D5["Mechanism<br/>attention 0.19-0.26 (mean 0.23) on top-3 μ slots<br/>about 12x the uniform 0.020; peaks 0.257 at max μ 84.8"]
+  end
