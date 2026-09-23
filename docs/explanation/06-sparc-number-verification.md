@@ -108,11 +108,11 @@ SPARC is **7.2×** smaller than MLP and **8.7×** smaller than the Transformer �
 | Cross-year full 2025→2026 | 2 | LQR | 1.065 | 59.63 | 7.05 | 22.70 |
 | Cross-year full 2025→2026 | 2 | PatchTST | 1.428 | 86.91 | 15.11 | 22.89 |
 
-## 8. Sensitivity (canonical `sensitivity`, 2 seeds)
+## 8. Sensitivity (canonical `sensitivity`, 2 seeds) — coverage/Winkler/CRPS RETRACTED, see ADR-0013
 
-- `ProposedMethod.coverage_90 = 89.50%` across **all** lag sets (24 / 24,48 / 24,48,168) and lead times (1, 2, 4, 12 h).
-- AQL varies 1.214–1.318; LQR coverage stays 69.97%.
-- Correct statement: "coverage stable at ≈ 89.5% across lag-set and constraint-lead settings (2-seed)."
+- **Bug (ADR-0013, fixed 2026-09-23):** `run_sensitivity.py`'s `sensitivity_row()` hardcoded the prediction reload path to the main run's tag instead of the current setting's `run_tag`, so `coverage_90`, `winkler_90`, and `crps` were reloaded from the same main-run file for every lag-set/lead setting — they were never actually measured per setting. This is why `ProposedMethod.coverage_90 = 89.50%` (and `winkler_90`/`crps`) were byte-identical across all 7 settings: it is one file read seven times, not a stability result.
+- **What remains valid:** AQL, which is computed directly during each setting's own training run and never reloaded from disk. AQL varies 1.214–1.318 across settings, confirming the sweep did retrain per setting even though three of its four reported metrics were wrong.
+- **Do not use** the "coverage stable at ≈89.5%" statement until TODO-19 (regenerate `sensitivity_results.json` with the fix) is complete and the corrected numbers are verified against fresh output.
 
 ## 9. PIT (canonical `calibration.<method>.pit_ks_p`)
 
