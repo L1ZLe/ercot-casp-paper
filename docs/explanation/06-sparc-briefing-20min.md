@@ -160,7 +160,7 @@ SPARC **8,978** · iTransformer 13,760 · LSTM 34,952 · TimesNet 40,584 · MLP 
 - Monthly Jan–May 2026 (2-seed): SPARC **90.21%** vs LQR 89.65%
 - Calendar 2025→2026 (2-seed): SPARC **77.80%** vs LQR **85.54%**
 - Cross-year full (2-seed): SPARC **72.21%** vs LQR **59.63%**
-- Sensitivity (2-seed): coverage **89.50%** across lag/lead settings
+- Sensitivity (2-seed): **coverage/Winkler/CRPS claim retracted** — `run_sensitivity.py` had a bug (fixed, ADR-0013) that reloaded the main run's predictions for every setting instead of each setting's own; only the AQL sensitivity (1.214–1.318 across settings) was ever valid. Pending regeneration (TODO-19).
 
 ### Godmode (godmode's own conformal split; SPARC baseline there = 17.52)
 A 22.35 · B 18.36 · C 18.37 · full 18.86 · D 18.19 · E 86.4%/14.59 · MV p=0.030 · β width 34.14 · γ coverage 64.66% · λ 17.772 vs 17.702 — **all fail to beat SPARC**.
