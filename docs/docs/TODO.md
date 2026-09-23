@@ -27,6 +27,6 @@ Active and completed tasks live in domain-cluster files under `docs/reference/`.
 
 ---
 
-*Next TODO: 19*
-*Status: 2026-09-04 — TODO-10/13/15 (M7/M9/M11) implemented; OOD monthly windows + seasonal calibration run (monthly_*_5.json); M11 attention analysis produced (fig_attn_concentration.png); ADRs 0005-0011 recorded. TODO-6 (honest table), TODO-18 (E1/E3/E4/E5 EDAs), TODO-16 (paper edit) pending.*
-*Last updated: 2026-09-04*
+*Next TODO: 20*
+*Status: 2026-09-23 — ADR-0013: fixed `run_sensitivity.py` prediction-path bug (coverage_90/winkler_90/crps were being reloaded from the main run instead of the actual sensitivity-run predictions; only aql was ever valid). TODO-19 added: regenerate `sensitivity_results.json`/`results.json.sensitivity` from the fix (needs local per-seed .npy / raw data, ADR-0012 — not reproducible from a bare clone). Corrected the "coverage stable ≈89.5%" claim in 06-sparc-briefing-20min.md, 07-sparc-briefing-full.md, 06-sparc-number-verification.md pending that rerun. TODO-6 (honest table), TODO-18 (E1/E3/E4/E5 EDAs), TODO-16 (paper edit) still pending.*
+*Last updated: 2026-09-23*
