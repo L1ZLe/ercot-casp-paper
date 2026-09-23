@@ -50,7 +50,7 @@ def sensitivity_row(config, model_class, seed, loaders):
     pred_path = os.path.join(
         config.results_dir,
         "per_seed",
-        f"main__{config.target_pair.replace('/', '_')}__"
+        f"{getattr(config, 'run_tag', 'main')}__{config.target_pair.replace('/', '_')}__"
         f"{model_class.__name__}_seed{seed}_pred.npy",
     )
     tgt_path = pred_path.replace("_pred.npy", "_target.npy")
