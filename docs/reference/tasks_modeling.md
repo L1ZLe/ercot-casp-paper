@@ -62,6 +62,16 @@ Discovery: `ls docs/reference/tasks_*.md` gives all clusters at a glance.
 * Dependencies: ADR-0011, TODO-16 (paper section), M11 (attention analysis)
 * Notes: E3 is a lightweight illustration, NOT a full backtest (ADR-0005, TODO-14). Calibration is stable across seasons; error winner flips by season — do not claim best error across seasons.
 
+### TODO-19 — Regenerate sensitivity_results.json after run_sensitivity.py path-bug fix (type: modeling|validation)
+
+[ ] Regenerate corrected sensitivity results and re-verify the claim
+
+* File: `code/results/sensitivity_results.json`, `code/results/results.json` (via `code/build_results.py`)
+* Current: `coverage_90` / `winkler_90` / `crps` are byte-identical across all 7 lag-set/lead settings — reloaded from the main-run predictions due to the bug fixed in ADR-0013, not from the actual per-config runs. Only `aql` is valid.
+* Target: regenerate from the already-existing `sens_*` per-seed `.npy` files if still present on disk (fast — no retraining needed), otherwise re-run `code/run_sensitivity.py`; then re-run `code/build_results.py` so `results.json.sensitivity` is corrected; update the coverage/Winkler robustness claim in `docs/explanation/06-sparc-briefing-20min.md`, `07-sparc-briefing-full.md`, `06-sparc-number-verification.md`, and (if already written by then) `paper.tex`.
+* Dependencies: ADR-0013
+* Notes: requires the local `per_seed/*.npy` files and/or the raw ERCOT data (both git-ignored / external per ADR-0012), so this can only be run on a machine that has them — not reproducible from a bare clone. Also consider making `sensitivity_row()` raise/log instead of silently returning `None` on a missing prediction file (latent bug noted in ADR-0013).
+
 ---
 
 ## Archived
