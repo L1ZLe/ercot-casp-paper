@@ -123,7 +123,7 @@ The core idea: **model how the market forms prices, not just the price history.*
 
 "Conformal defense: a reviewer might say 'just wrap the linear model in conformal.' We did. It reaches **91.7%** coverage at width **12.69** — but its calibrated Winkler is still **20.01**, worse than our **17.70**. So conformal equalizes coverage but not width-efficiency; the edge is **intrinsic**."
 
-"Sensitivity (2-seed): coverage stays at **89.5%** across all lag sets (24 / 24-48 / 24-48-168) and constraint leads (1, 2, 4, 12 h), so the result is not an artifact of one choice."
+"Sensitivity (2-seed): the coverage/Winkler/CRPS-stability claim is retracted. `run_sensitivity.py` had a bug (fixed, ADR-0013): it reloaded the main run's saved predictions for every lag-set/lead setting instead of that setting's own, so coverage/Winkler/CRPS never actually varied — only AQL (1.214–1.318 across settings) was computed from the real per-setting run and is valid. Regeneration pending (TODO-19); do not cite the 89.5%-stable-coverage figure until then."
 
 ### [S13] The God model — [SHOW D7]
 
@@ -185,7 +185,7 @@ SPARC **8,978** · iTransformer 13,760 · LSTM 34,952 · TimesNet 40,584 · MLP 
 0.19–0.26 (mean 0.23) on top-3 μ slots; ≈12× uniform 0.020; peak 0.257 at max μ 84.8
 
 ### OOD
-Probes NORTH **86.57%** / WEST **90.98%** (5-seed) · monthly Jan–May **90.2 vs 89.7** (2-seed) · calendar **77.80 vs 85.54** (2-seed) · cross-year **72.21 vs 59.63** (2-seed) · sensitivity **89.50%** (2-seed)
+Probes NORTH **86.57%** / WEST **90.98%** (5-seed) · monthly Jan–May **90.2 vs 89.7** (2-seed) · calendar **77.80 vs 85.54** (2-seed) · cross-year **72.21 vs 59.63** (2-seed) · sensitivity coverage/Winkler/CRPS **retracted pending TODO-19** (ADR-0013 bug fix), AQL sensitivity 1.214–1.318 valid
 
 ### Godmode (godmode conformal; SPARC baseline 17.52)
 10 directions: A 22.35 · B 18.36 · C 18.37 · full 18.86 · D 18.19 · E 86.4%/14.59 · MV p=0.030 · β width 34.14 · γ coverage 64.66% · λ 17.772 vs 17.702
