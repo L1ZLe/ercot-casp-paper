@@ -38,6 +38,10 @@ models/
 # Local editor settings
 .vscode/
 
+# Run logs and Kilo session plans (local-only)
+logs/
+.kilo/plans/
+
 # OS
 .DS_Store
 

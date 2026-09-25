@@ -8,7 +8,7 @@ the frame choice (Sol 3 alive); if it flips, the near-range frame is doing the
 work (Sol 3 dead).
 
 Usage:
-  .venv/bin/python code/probe_frame_winkler.py --train-year 2025 --test-year 2026 --start 2026-01-01 --end 2026-06-01 --seeds 42,43
+  .venv/bin/python code/probe_frame_winkler.py --train-year 2025 --test-year 2026 --start 2026-01-01 --end 2026-06-01 --seeds 42,43,44,45,46
 """
 
 import argparse
@@ -32,7 +32,7 @@ def main():
     ap.add_argument("--test-year", default="2026")
     ap.add_argument("--start", default="2026-01-01")
     ap.add_argument("--end", default="2026-06-01")
-    ap.add_argument("--seeds", default="42,43")
+    ap.add_argument("--seeds", default="42,43,44,45,46")
     args = ap.parse_args()
     seeds = [int(x) for x in args.seeds.split(",")]
 

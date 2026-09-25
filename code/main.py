@@ -661,7 +661,7 @@ def main():
             )
             _emit("BaselineRF", metrics)
 
-    # Run generalization experiments (2 extra source-sink pairs × 2 seeds)
+    # Run generalization experiments (2 extra source-sink pairs × 5 seeds)
     logger.info("=" * 50)
     logger.info("Running generalization experiments on extra source-sink pairs...")
 
@@ -680,7 +680,7 @@ def main():
         ),
     ]
 
-    gen_seeds = config.seed_list[:2]  # Use first 2 seeds
+    gen_seeds = config.seed_list  # full 5-seed protocol (ADR-0004)
     generalization_results = {}
 
     for pair_name, src, snk, extras in generalization_pairs:

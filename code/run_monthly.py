@@ -50,7 +50,7 @@ def main():
     ap.add_argument("--year", default="2026")
     ap.add_argument("--start", default="2026-01-01")
     ap.add_argument("--end", default="2026-06-01")
-    ap.add_argument("--seeds", default="42,43")
+    ap.add_argument("--seeds", default="42,43,44,45,46")
     ap.add_argument("--out", default=default_out)
     args = ap.parse_args()
     seeds = [int(x) for x in args.seeds.split(",")]

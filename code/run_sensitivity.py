@@ -47,15 +47,20 @@ def sensitivity_row(config, model_class, seed, loaders):
     metrics = run_pytorch_model(
         model_class, config, seed, train_loader, val_loader, test_loader
     )
+    tag = getattr(config, "run_tag", "main")
     pred_path = os.path.join(
         config.results_dir,
         "per_seed",
-        f"main__{config.target_pair.replace('/', '_')}__"
+        f"{tag}__{config.target_pair.replace('/', '_')}__"
         f"{model_class.__name__}_seed{seed}_pred.npy",
     )
     tgt_path = pred_path.replace("_pred.npy", "_target.npy")
     if not (os.path.exists(pred_path) and os.path.exists(tgt_path)):
-        return None
+        raise FileNotFoundError(
+            f"sensitivity predictions missing for run_tag={tag!r} "
+            f"({model_class.__name__}, seed {seed}): {pred_path}. "
+            "Refusing to silently skip; check that save_per_seed wrote this run_tag."
+        )
     pred = np.load(pred_path)
     tgt = np.load(tgt_path)
     lo_i, up_i = config.quantiles.index(0.10), config.quantiles.index(0.90)
@@ -97,7 +102,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--constraint-leads", nargs="+", type=int, default=[1, 2, 4, 12])
     ap.add_argument("--lag-sets", nargs="+", default=["24", "24,48", "24,48,168"])
-    ap.add_argument("--seeds", nargs="+", type=int, default=[42, 44])
+    ap.add_argument("--seeds", nargs="+", type=int, default=[42, 43, 44, 45, 46])
     ap.add_argument("--methods", nargs="+", default=["ProposedMethod", "BaselineLQR"])
     args = ap.parse_args()
 
