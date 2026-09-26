@@ -112,11 +112,10 @@ Under the true ex-ante 24 h constraint lead (ADR-0013), SPARC's generalisation a
 
 ---
 
-## 7. What is still stale
+## 7. Stale items — resolved
 
-- **Docs**: `docs/research_brief.md`, `docs/reference/results-record.md`, `docs/explanation/03-paper-framing.md`, **ADR-0011** still carry 2-seed/1 h numbers → supersede or correct.
-- **Paper draft** in `AIstats research paper (outdated)/` still uses 1 h numbers.
-- **Flowcharts**: godmode nodes updated to the 24 h numbers in this change set.
+- All narrative docs now carry the canonical 24 h / 5-seed numbers: `research_brief.md`, `results-record.md`, `03-paper-framing.md`, `05-sparc-evidence-trail-2026-09.md`, `04-casp-vs-mrinn.md`, `godmode_design.md`, and the briefings.
+- **ADR-0014** supersedes ADR-0011's seasonal-OOD evidence (the three-window seasonal table is dropped); ADR-0010 carries a superseding note. The outdated paper draft is no longer cited anywhere.
 
 ---
 

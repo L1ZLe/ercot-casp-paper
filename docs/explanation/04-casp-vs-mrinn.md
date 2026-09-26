@@ -1,8 +1,8 @@
 # SPARC vs MRINN (Yu et al., arXiv:2605.09061) — Comparative Analysis
 
-_2026-09-13 · Sources: [arXiv:2605.09061](https://arxiv.org/abs/2605.09061) (MRINN, fetched 2026-09-13), [paper.tex](../../AIstats%20research%20paper%20(outdated)/paper.tex), [research_brief.md](../research_brief.md), [code/models.py](../../code/models.py), [config.py](../../config.py), [ADR-0004](../adr/0004-experiment-protocol-cpu-chronological-split-pure-pinball-aql.md)_
+_2026-09-13 · Sources: [arXiv:2605.09061](https://arxiv.org/abs/2605.09061) (MRINN, fetched 2026-09-13), [research_brief.md](../research_brief.md), [code/models.py](../../code/models.py), [config.py](../../config.py), [ADR-0004](../adr/0004-experiment-protocol-cpu-chronological-split-pure-pinball-aql.md)_
 
-This doc compares SPARC against the one prior work that embeds market rules into a neural forecaster — *A Market-Rule-Informed Neural Network for Efficient Imbalance Electricity Price Forecasting* (MRINN), the paper cited as `yu2026marketruleinformed` in [sparc.bib](../../AIstats%20research%20paper%20(outdated)/sparc.bib). It explains *why* the two architectures differ, *what* SPARC does differently, and *where* each retains an edge. The goal is an honest map, not a win-loss tally: two market designs are so structurally different that raw metric values are not comparable.
+This doc compares SPARC against the one prior work that embeds market rules into a neural forecaster — *A Market-Rule-Informed Neural Network for Efficient Imbalance Electricity Price Forecasting* (MRINN, `yu2026marketruleinformed`, arXiv:2605.09061). It explains *why* the two architectures differ, *what* SPARC does differently, and *where* each retains an edge. The goal is an honest map, not a win-loss tally: two market designs are so structurally different that raw metric values are not comparable.
 
 ---
 
@@ -70,7 +70,7 @@ The deepest conceptual difference is therefore **formula-embedding vs. output-co
 ### 3a. Setting and construction
 
 - **ERCOT day-ahead nodal market**; hourly; 2026. Target: the day-ahead LMP spread `y_t = p_src − p_snk` ($/MWh) for HB_HUBAVG → HB_PAN (highest-volume PTP pair).
-- **Physical prior:** the LMP decomposition `LMP_i = λ_t + Σ_c SF_{i,c} μ_c` means the spread cancels the common energy term exactly, leaving a congestion residual `y_t = Σ_c (SF_src,c − SF_snk,c) μ_c` — a function of binding constraints and their shadow prices. SPARC models this residual directly; it does not estimate two bus prices and difference them, and it learns no energy term (see [paper.tex](../../AIstats%20research%20paper%20(outdated)/paper.tex) §Method for the exact derivation).
+- **Physical prior:** the LMP decomposition `LMP_i = λ_t + Σ_c SF_{i,c} μ_c` means the spread cancels the common energy term exactly, leaving a congestion residual `y_t = Σ_c (SF_src,c − SF_snk,c) μ_c` — a function of binding constraints and their shadow prices. SPARC models this residual directly; it does not estimate two bus prices and difference them, and it learns no energy term (see [research_brief.md](../research_brief.md) for the derivation).
 - **Ex-ante discipline:** all market-clearing inputs are lagged ≥ 24 h (constraint slots are taken from the previous day's day-ahead clearing in [code/data.py](../../code/data.py), ADR-0013) and the split is a strict chronological 70/15/15 — no test-time information.
 
 ### 3b. Architecture
@@ -82,7 +82,7 @@ The deepest conceptual difference is therefore **formula-embedding vs. output-co
 5. **Temporal block:** 18-d temporal vector (Fourier within-day/weekly features + lags at 24/48/168 h) through a lightweight feedforward encoder.
 6. **Quantile head:** a **plain two-layer head** outputs the 7 quantiles; ordering is encouraged by a **soft non-crossing penalty** (LA-CASF, λ = 0.1) that is a *training objective only* (ADR-0004: never a reported metric). Measured coherence: AQCR = 0.11% (the hard head achieves 0.00% by construction).
 
-*Fidelity note:* [paper.tex](../../AIstats%20research%20paper%20(outdated)/paper.tex) ($ paper source) describes a "hierarchical non-crossing quantile head"; the shipped implementation in [code/models.py](../../code/models.py) is a plain head + soft penalty. This doc describes the implemented mechanism, matching ADR-0004.
+*Fidelity note:* the shipped flagship in [code/models.py](../../code/models.py) is a plain head + soft penalty (`ProposedMethod`); the `ProposedMethodHier` variant implements the hierarchical non-crossing head (AQCR 0.00). This doc describes the implemented mechanism, matching ADR-0004.
 
 ### 3c. Protocol and results
 
@@ -126,7 +126,7 @@ The deepest conceptual difference is therefore **formula-embedding vs. output-co
 
 ## 5. Key technical / structural / conceptual differences
 
-1. **Formula-embedding vs. output-conditioning (the deepest gap).** MRINN needs a written-down settlement formula to build its differentiable rule blocks. That formula exists in European balancing markets (and is the reason the approach is possible there). In a nodal market, no such formula exists — LMPs emerge from a security-constrained economic dispatch. SPARC's pivot is to condition on the *outputs* of the clearing instead (constraint bindings + shadow prices), which is the market-structure signal that is actually available ex-ante. See the repo's own prior framing in [AIstats research paper/paper_body.tex](../../AIstats%20research%20paper%20(outdated)/paper_body.tex): "conditioning on market-clearing outputs rather than embedding the clearing optimization." This is a genuinely different mechanism for injecting market structure, not a variant of the same idea.
+1. **Formula-embedding vs. output-conditioning (the deepest gap).** MRINN needs a written-down settlement formula to build its differentiable rule blocks. That formula exists in European balancing markets (and is the reason the approach is possible there). In a nodal market, no such formula exists — LMPs emerge from a security-constrained economic dispatch. SPARC's pivot is to condition on the *outputs* of the clearing instead (constraint bindings + shadow prices), which is the market-structure signal that is actually available ex-ante. This is a genuinely different mechanism for injecting market structure, not a variant of the same idea.
 2. **Closed-form prior vs. learned prior.** MRINN hard-codes the exact rule (its coefficients are transformed market constants). SPARC *learns* the weighting of constraints (including which ones matter for a given pair and hour) rather than transcribing a formula — necessary because no formula exists, and it is what yields per-hour interpretability.
 3. **Quantile coherence: structural guarantee vs. soft penalty.** MRINN's hierarchical head guarantees ordering (AQCR = 0.00); SPARC uses a soft non-crossing penalty with measured 0.11% crossing (its own hard-head variant also reaches 0.00%). MRINN is stronger here *in principle*; SPARC's penalty keeps the head simple and trains end-to-end without the hierarchical-parameter constraint.
 4. **Interpretability by construction.** MRINN offers no per-sample attribution (its latent rule blocks are not inspected; the "transparency" is that the rule structure is known). SPARC's attention weights are readable by construction — "which constraints drive this hour's spread" — and verified to concentrate on top-shadow-price slots. This is a stated SPARC advantage (research_brief.md, 03-paper-framing.md).
