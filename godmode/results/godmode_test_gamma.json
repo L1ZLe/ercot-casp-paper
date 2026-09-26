@@ -1,23 +1,72 @@
 {
   "test": "gamma-oracle-routing",
-  "seed": 42,
-  "rows_aligned": true,
-  "pipeline": {
-    "ProposedMethod": {
-      "cov": 86.98030634573304,
-      "width": 12.868873200361989
+  "seeds": [
+    42,
+    43,
+    44,
+    45,
+    46
+  ],
+  "per_seed": [
+    {
+      "seed": 42,
+      "cov_pm": 86.98030634573304,
+      "wid_pm": 13.825366025794647,
+      "cov_lqr": 69.69365426695843,
+      "wid_lqr": 5.684149772841769,
+      "cov_sel": 69.69365426695843,
+      "sel_wid": 5.683719850485611,
+      "sel_frac_pm": 0.0010940919037199124
     },
-    "BaselineLQR": {
-      "cov": 64.66083150984683,
-      "width": 5.438638306917782
+    {
+      "seed": 43,
+      "cov_pm": 89.38730853391685,
+      "wid_pm": 14.085851966006032,
+      "cov_lqr": 70.13129102844638,
+      "wid_lqr": 5.438221804129217,
+      "cov_sel": 70.13129102844638,
+      "sel_wid": 5.438221804129217,
+      "sel_frac_pm": 0.0
+    },
+    {
+      "seed": 44,
+      "cov_pm": 92.45076586433261,
+      "wid_pm": 15.205494581202057,
+      "cov_lqr": 77.24288840262582,
+      "wid_lqr": 7.712512369559063,
+      "cov_sel": 77.24288840262582,
+      "sel_wid": 7.712512369559063,
+      "sel_frac_pm": 0.0
+    },
+    {
+      "seed": 45,
+      "cov_pm": 91.68490153172867,
+      "wid_pm": 14.869218863921823,
+      "cov_lqr": 71.33479212253829,
+      "wid_lqr": 5.49677636992814,
+      "cov_sel": 71.33479212253829,
+      "sel_wid": 5.49677636992814,
+      "sel_frac_pm": 0.0
+    },
+    {
+      "seed": 46,
+      "cov_pm": 86.54266958424508,
+      "wid_pm": 11.347594182520567,
+      "cov_lqr": 77.24288840262582,
+      "wid_lqr": 7.740911527273919,
+      "cov_sel": 77.24288840262582,
+      "sel_wid": 7.739697313637226,
+      "sel_frac_pm": 0.005470459518599562
     }
+  ],
+  "mean": {
+    "proposedmethod_cov": 89.40919037199124,
+    "baselinelqr_cov": 73.12910284463894,
+    "selected_cov": 73.12910284463894,
+    "selected_mean_width": 6.414185541547852,
+    "frac_from_proposedmethod": 0.001312910284463895
   },
-  "pointwise_min": {
-    "cov": 64.66083150984683,
-    "mean_width": 5.43762951190186,
-    "frac_from_proposedmethod": 0.0032822757111597373
-  },
-  "coverage_deficit_pp": 25.339168490153174,
+  "coverage_deficit_pp": 16.870897155361064,
   "verdict": "RULE OUT",
-  "note": "Min-selection does not generally preserve marginal coverage; this tests whether it does here. ALIVE only if cov>=90%."
+  "note": "Min-selection does not generally preserve marginal coverage; this tests whether it does here. ALIVE only if mean cov>=90%."
 }

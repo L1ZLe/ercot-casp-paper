@@ -1,0 +1,191 @@
+{
+  "seeds": [
+    42,
+    43,
+    44,
+    45,
+    46
+  ],
+  "configs_run": [
+    "A",
+    "B",
+    "C",
+    "full"
+  ],
+  "aql": {
+    "A": 1.1547532039750767,
+    "B": 1.2787415231926622,
+    "C": 1.2560830934289124,
+    "full": 1.2988287158359673
+  },
+  "calibrated": {
+    "A": {
+      "runs": [
+        {
+          "seed": 42,
+          "conformal_coverage_90": 86.87089715536105,
+          "conformal_width_90": 10.108977430511093,
+          "conformal_winkler_90": 21.10883918660214,
+          "winkler_90_raw": 20.290366914816186
+        },
+        {
+          "seed": 43,
+          "conformal_coverage_90": 90.37199124726477,
+          "conformal_width_90": 12.705605447995017,
+          "conformal_winkler_90": 20.862161496977777,
+          "winkler_90_raw": 28.289837547777633
+        },
+        {
+          "seed": 44,
+          "conformal_coverage_90": 92.12253829321662,
+          "conformal_width_90": 13.189278810847908,
+          "conformal_winkler_90": 20.043439743284715,
+          "winkler_90_raw": 24.995079150360233
+        },
+        {
+          "seed": 45,
+          "conformal_coverage_90": 91.68490153172867,
+          "conformal_width_90": 12.046426965164212,
+          "conformal_winkler_90": 18.500988536683487,
+          "winkler_90_raw": 24.583564883004264
+        },
+        {
+          "seed": 46,
+          "conformal_coverage_90": 91.46608315098467,
+          "conformal_width_90": 12.095509822268868,
+          "conformal_winkler_90": 20.159908733127292,
+          "winkler_90_raw": 24.472469679073836
+        }
+      ],
+      "conformal_coverage_90_mean": 90.50328227571114,
+      "conformal_width_90_mean": 12.029159695357418,
+      "conformal_winkler_90_mean": 20.135067539335083
+    },
+    "B": {
+      "runs": [
+        {
+          "seed": 42,
+          "conformal_coverage_90": 93.8730853391685,
+          "conformal_width_90": 13.063424999813023,
+          "conformal_winkler_90": 17.576403965730897,
+          "winkler_90_raw": 19.685597161756302
+        },
+        {
+          "seed": 43,
+          "conformal_coverage_90": 92.5601750547046,
+          "conformal_width_90": 12.735332538732045,
+          "conformal_winkler_90": 17.85405357833504,
+          "winkler_90_raw": 19.38965551949695
+        },
+        {
+          "seed": 44,
+          "conformal_coverage_90": 92.5601750547046,
+          "conformal_width_90": 14.808457258337178,
+          "conformal_winkler_90": 17.975410354417836,
+          "winkler_90_raw": 19.386523320333506
+        },
+        {
+          "seed": 45,
+          "conformal_coverage_90": 92.34135667396062,
+          "conformal_width_90": 17.458498970371902,
+          "conformal_winkler_90": 19.602225609283483,
+          "winkler_90_raw": 21.756720289555368
+        },
+        {
+          "seed": 46,
+          "conformal_coverage_90": 91.68490153172867,
+          "conformal_width_90": 14.727111810954447,
+          "conformal_winkler_90": 18.8879949517597,
+          "winkler_90_raw": 19.52154136275469
+        }
+      ],
+      "conformal_coverage_90_mean": 92.6039387308534,
+      "conformal_width_90_mean": 14.558565115641722,
+      "conformal_winkler_90_mean": 18.379217691905392
+    },
+    "C": {
+      "runs": [
+        {
+          "seed": 42,
+          "conformal_coverage_90": 88.8402625820569,
+          "conformal_width_90": 14.118593438370741,
+          "conformal_winkler_90": 17.43528633975878,
+          "winkler_90_raw": 18.20759452215887
+        },
+        {
+          "seed": 43,
+          "conformal_coverage_90": 90.80962800875274,
+          "conformal_width_90": 12.099221592567684,
+          "conformal_winkler_90": 18.14228639007267,
+          "winkler_90_raw": 18.836177518970334
+        },
+        {
+          "seed": 44,
+          "conformal_coverage_90": 91.68490153172867,
+          "conformal_width_90": 15.363610561723528,
+          "conformal_winkler_90": 18.894797679312383,
+          "winkler_90_raw": 20.234120117463743
+        },
+        {
+          "seed": 45,
+          "conformal_coverage_90": 90.59080962800876,
+          "conformal_width_90": 11.517605505626104,
+          "conformal_winkler_90": 17.227025733526215,
+          "winkler_90_raw": 19.163049326292533
+        },
+        {
+          "seed": 46,
+          "conformal_coverage_90": 91.90371991247265,
+          "conformal_width_90": 12.515349363706838,
+          "conformal_winkler_90": 18.60129646514125,
+          "winkler_90_raw": 19.904858045165856
+        }
+      ],
+      "conformal_coverage_90_mean": 90.76586433260394,
+      "conformal_width_90_mean": 13.122876092398977,
+      "conformal_winkler_90_mean": 18.06013852156226
+    },
+    "full": {
+      "runs": [
+        {
+          "seed": 42,
+          "conformal_coverage_90": 91.02844638949672,
+          "conformal_width_90": 14.313155909388016,
+          "conformal_winkler_90": 17.335583743061747,
+          "winkler_90_raw": 18.88895394547111
+        },
+        {
+          "seed": 43,
+          "conformal_coverage_90": 91.68490153172867,
+          "conformal_width_90": 12.778181224683182,
+          "conformal_winkler_90": 17.040465003760694,
+          "winkler_90_raw": 19.692046240722064
+        },
+        {
+          "seed": 44,
+          "conformal_coverage_90": 93.6542669584245,
+          "conformal_width_90": 16.120864313178956,
+          "conformal_winkler_90": 18.881386930601472,
+          "winkler_90_raw": 20.988502248412473
+        },
+        {
+          "seed": 45,
+          "conformal_coverage_90": 92.34135667396062,
+          "conformal_width_90": 13.494407688971423,
+          "conformal_winkler_90": 18.250150697966898,
+          "winkler_90_raw": 20.513851445535078
+        },
+        {
+          "seed": 46,
+          "conformal_coverage_90": 91.68490153172867,
+          "conformal_width_90": 15.221657097942858,
+          "conformal_winkler_90": 19.803186014995664,
+          "winkler_90_raw": 21.41191283762618
+        }
+      ],
+      "conformal_coverage_90_mean": 92.07877461706782,
+      "conformal_width_90_mean": 14.385653246832884,
+      "conformal_winkler_90_mean": 18.262154478077296
+    }
+  }
+}

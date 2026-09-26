@@ -74,6 +74,29 @@ LQR still wins average error (AQL 1.171 vs 1.254) — now **significantly** (p=0
 
 ---
 
+## 5b. Godmode rerun at 24 h / 5 seeds: still negative
+
+`godmode/run_all_5seed.sh` reran every godmode experiment at the 24 h lead with 5 seeds. **Ten directions tested; none significantly beats SPARC** (`probes_passed: []`).
+
+| Direction | 24 h, 5-seed result | Verdict |
+|---|---|---|
+| Probe A (linear spine + rule + conformal) | cal-Winkler **20.14** (cov 90.50) | ❌ vs LQR 20.03 |
+| Probe B (time-in-query attention) | **18.38** (cov 92.60) | ❌ vs SPARC 18.20 |
+| Probe C (identity-only) | **18.06** (cov 90.77) | ❌ best probe; fails AQL-parity line (1.256 vs full 1.299) |
+| Probe full (fusion) | **18.26** (cov 92.08) | ❌ vs SPARC 18.20 |
+| Move D (Winkler objective) | 18.34, **cov 87.9** | ❌ under-covers |
+| Move E (CQR conformal) | 17.38, width 12.14, **cov 85.3** | ❌ invalid — Winkler "win" at sub-90% coverage |
+| MV (level/spread factorization) | 18.16 vs 18.20, p=0.88 | ❌ wash |
+| λ = 0.05 vs 0.10 | 18.08 vs 18.20, p=0.41 | ❌ n.s. |
+| β (nested normalized conformal) | PIT worse (KS 5e-28 vs 5.6e-12) | ❌ RULE OUT |
+| γ (oracle min-width routing) | selected cov **73.13%** | ❌ RULE OUT |
+
+Only the **α width-envelope** test survives (λ moves the raw band width monotonically, spread 0.042 > 0.02) — a property, not a win.
+
+**Read:** the negative result is robust at the realistic lead and 5 seeds. The closest rival is Probe C at 18.06 (vs SPARC-hard 18.00, SPARC-soft 18.20) — inside seed noise. Ten rival explanations tested and ruled out.
+
+---
+
 ## 6. OOD: evaluated at 24 h (5-seed)
 
 | Frame | 24 h (5-seed canonical) |
@@ -89,12 +112,11 @@ Under the true ex-ante 24 h constraint lead (ADR-0013), SPARC's generalisation a
 
 ---
 
-## 7. What is still on the 1 h lead (stale)
+## 7. What is still stale
 
-- **Godmode** results (`godmode/results/*.json`) — SPARC baseline 17.52 under its own conformal split. Either rerun at 24 h or label "1 h-lead probe".
-- **Flowcharts** — update in progress (this change set).
 - **Docs**: `docs/research_brief.md`, `docs/reference/results-record.md`, `docs/explanation/03-paper-framing.md`, **ADR-0011** still carry 2-seed/1 h numbers → supersede or correct.
 - **Paper draft** in `AIstats research paper (outdated)/` still uses 1 h numbers.
+- **Flowcharts**: godmode nodes updated to the 24 h numbers in this change set.
 
 ---
 

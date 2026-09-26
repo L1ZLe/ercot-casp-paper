@@ -140,17 +140,17 @@ flowchart TD
 
   subgraph G_D7["D7 - The God model (10 experiments)"]
     IDEA["The idea<br/>every model wins exactly one axis<br/>linear wins average error, persistence wins MAE<br/>physics rule is a free prior; monotone head rescues coherence<br/>conformal guarantees coverage<br/>so fuse the winners into one model"] --> ARCH["The fusion design<br/>linear spine + attention residual + physics bias<br/>+ monotone head + conformal<br/>scored on calibrated Winkler, not AQL"]
-    ARCH --> VERDICT["Verdict: NEGATIVE<br/>10 tested directions, none beats SPARC<br/>(godmode conformal, 1 h lead; SPARC baseline 17.52)"]
-    VERDICT --> E1["1 linear spine + market prior + conformal<br/>AQL 1.159 (best), Winkler 22.35 FAIL<br/>sharp but loses the calibration"]
-    VERDICT --> E2["2 time inside the attention query<br/>Winkler 18.36 vs SPARC 17.52 FAIL<br/>fixing the architecture did not improve calibration"]
-    VERDICT --> E3["3 identity-only, drop μ magnitude<br/>Winkler 18.37, passes its own line but above SPARC<br/>simpler is nearly as good, no gain"]
-    VERDICT --> E4["4 full additive fusion<br/>Winkler 18.86 FAIL<br/>complexity without a calibration gain"]
-    VERDICT --> E5["5 train on the metric you report<br/>coverage 87.1, AQL 1.264, Winkler 18.19 FAIL<br/>conformal already absorbs band offsets; warps the grid"]
-    VERDICT --> E6["6 feature-adaptive conformal<br/>width 14.59, coverage 86.4, Winkler 20.29 FAIL<br/>native quantiles already encode conditional width"]
-    VERDICT --> E7["7 level/spread factorization<br/>seed-42 better, 5-seed AQL 1.2786 vs 1.2094 p=0.030 FAIL<br/>the seed-42 win was noise"]
-    VERDICT --> E8["8 nested normalized conformal<br/>width 34.14, Winkler 38.70 RULE OUT<br/>over-scaled the band; residuals already non-uniform"]
-    VERDICT --> E9["9 pointwise min-width routing<br/>coverage collapsed to 64.66% RULE OUT<br/>the narrower band is the uncalibrated one"]
-    VERDICT --> E10["10 tune the crossing penalty<br/>seed-42 better, 5-seed 17.772 vs 17.702 FAIL<br/>no AQL effect"]
+    ARCH --> VERDICT["Verdict: NEGATIVE<br/>10 tested directions, none beats SPARC<br/>(24 h, 5-seed; SPARC soft 18.20 / hard 18.00)"]
+    VERDICT --> E1["1 linear spine + market prior + conformal<br/>cal-Winkler 20.14, cov 90.50 FAIL (vs LQR 20.03)<br/>sharp but loses the calibration"]
+    VERDICT --> E2["2 time inside the attention query<br/>cal-Winkler 18.38 vs SPARC 18.20 FAIL<br/>fixing the architecture did not improve calibration"]
+    VERDICT --> E3["3 identity-only, drop μ magnitude<br/>cal-Winkler 18.06 (best probe) but fails its AQL-parity line<br/>simpler is nearly as good, no gain"]
+    VERDICT --> E4["4 full additive fusion<br/>cal-Winkler 18.26 FAIL<br/>complexity without a calibration gain"]
+    VERDICT --> E5["5 train on the metric you report (Move D)<br/>cal-Winkler 18.34 but coverage 87.9 - under-covers FAIL"]
+    VERDICT --> E6["6 feature-adaptive conformal (CQR, Move E)<br/>cal-Winkler 17.38, width 12.14, but coverage 85.3 - invalid FAIL"]
+    VERDICT --> E7["7 level/spread factorization (MV)<br/>cal-Winkler 18.16 vs 18.20, p=0.88 FAIL (wash)"]
+    VERDICT --> E8["8 nested normalized conformal (β)<br/>normalized PIT worse (KS 5e-28 vs 5.6e-12) RULE OUT"]
+    VERDICT --> E9["9 pointwise min-width routing (γ)<br/>selected coverage 73.13% RULE OUT<br/>min-selection destroys marginal coverage"]
+    VERDICT --> E10["10 tune the crossing penalty (λ)<br/>cal-Winkler 18.08 vs 18.20, p=0.41 FAIL (n.s.)"]
     VERDICT --> OTHERS7["Other paper's rule and head (canonical conformal)<br/>market-rule-embedded 18.17, hier 18.11 (24 h)<br/>SPARC family within 0.2: soft 18.20, hard 18.00 (n.s.)<br/>hard head on SPARC 18.00 vs soft 18.20 - comparable"]
   end
 
@@ -201,5 +201,5 @@ flowchart TD
     R11["R-XYEAR - full 2025->2026: 90.1 vs 81.4; calendar 90.5 vs 82.3 (5-seed)"] --> SRC1
     R12["R-CONF - LQR 91.82 / 12.71 / 20.03 vs SPARC 91.90 / 13.90 / 18.20 (soft)"] --> SRC1
     R13["R-SENS - leads 1/2/4/12/24: Winkler 18.43/19.74/20.38/21.16/20.25 (5-seed, varies)"] --> SRC1
-    R14["R-GOD - 10 directions, SPARC 17.52 baseline (1 h lead)"] --> SRC2["godmode/results/*.json"]
+    R14["R-GOD - 10 directions at 24 h; none beats SPARC (soft 18.20 / hard 18.00)"] --> SRC2["godmode/results/*.json"]
   end

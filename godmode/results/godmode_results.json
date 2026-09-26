@@ -1,134 +1,138 @@
 {
   "_meta": {
-    "schema": "godmode-probe-verdict-v1",
-    "seed": 42,
-    "note": "Calibrated metrics recomputed from per-seed .npy (split-conformal band, cal_frac=0.5). Baselines = locked seed-42 main-run predictions on the same test split."
+    "schema": "godmode-probe-verdict-v2",
+    "seeds": [
+      42,
+      43,
+      44,
+      45,
+      46
+    ],
+    "note": "5-seed mean of calibrated metrics computed from per-seed .npy (split-conformal band, cal_frac=0.5), 24h constraint lead (ADR-0013). Baselines = locked main-run predictions on the same test split per seed."
   },
   "methods": {
     "GodmodeA": {
-      "aql": 1.1594362793919124,
-      "mae": 2.73677615627353,
-      "success_rate": 82.71334792122538,
-      "winkler_raw": 24.26712258381023,
-      "conformal_coverage_90": 88.8402625820569,
-      "conformal_width_90": 12.716541195000547,
-      "conformal_winkler_90": 22.34529768852619
+      "aql": 1.1547532039750767,
+      "mae": 2.7860712601373243,
+      "success_rate": 68.14004376367616,
+      "winkler_raw": 24.526263635006433,
+      "conformal_coverage_90": 90.50328227571114,
+      "conformal_width_90": 12.029159695357418,
+      "conformal_winkler_90": 20.135067539335083
     },
     "GodmodeB": {
-      "aql": 1.2389562146571647,
-      "mae": 2.728295534457889,
-      "success_rate": 90.91903719912473,
-      "winkler_raw": 19.554578065432004,
-      "conformal_coverage_90": 88.8402625820569,
-      "conformal_width_90": 14.242843734957201,
-      "conformal_winkler_90": 18.359126450828967
+      "aql": 1.2787415231926622,
+      "mae": 2.847005334141495,
+      "success_rate": 87.3960612691466,
+      "winkler_raw": 19.94800753077936,
+      "conformal_coverage_90": 92.6039387308534,
+      "conformal_width_90": 14.558565115641722,
+      "conformal_winkler_90": 18.379217691905392
     },
     "GodmodeC": {
-      "aql": 1.2277626382208553,
-      "mae": 2.746299656307736,
-      "success_rate": 86.76148796498906,
-      "winkler_raw": 19.635921200855556,
-      "conformal_coverage_90": 89.93435448577681,
-      "conformal_width_90": 14.612479323735647,
-      "conformal_winkler_90": 18.365546259831806
+      "aql": 1.2560830934289124,
+      "mae": 2.88790850080509,
+      "success_rate": 90.89715536105032,
+      "winkler_raw": 19.269159906010266,
+      "conformal_coverage_90": 90.76586433260394,
+      "conformal_width_90": 13.122876092398977,
+      "conformal_winkler_90": 18.06013852156226
     },
     "Godmode": {
-      "aql": 1.2127557464215144,
-      "mae": 2.6774513274145924,
-      "success_rate": 86.65207877461707,
-      "winkler_raw": 21.603175825726737,
-      "conformal_coverage_90": 91.02844638949672,
-      "conformal_width_90": 14.088906861134115,
-      "conformal_winkler_90": 18.862922265336604
+      "aql": 1.2988287158359673,
+      "mae": 2.952049431664547,
+      "success_rate": 87.3741794310722,
+      "winkler_raw": 20.29905334355338,
+      "conformal_coverage_90": 92.07877461706782,
+      "conformal_width_90": 14.385653246832884,
+      "conformal_winkler_90": 18.262154478077296
     },
     "BaselineLQR": {
-      "aql": 1.1672139641021533,
-      "mae": 2.8911846593120165,
-      "success_rate": 64.66083150984683,
-      "winkler_raw": 25.89449522824432,
-      "conformal_coverage_90": 91.90371991247265,
-      "conformal_width_90": 12.917206342973188,
-      "conformal_winkler_90": 19.8642691539091
+      "aql": 1.171239271004986,
+      "mae": 2.9072579257695628,
+      "success_rate": 73.12910284463894,
+      "winkler_raw": 24.425307044551523,
+      "conformal_coverage_90": 91.81619256017505,
+      "conformal_width_90": 12.710028651500167,
+      "conformal_winkler_90": 20.025850451638195
     },
     "ProposedMethod": {
-      "aql": 1.2142855467116846,
-      "mae": 2.8734837225281695,
-      "success_rate": 86.98030634573304,
-      "winkler_raw": 18.36630718862532,
-      "conformal_coverage_90": 91.90371991247265,
-      "conformal_width_90": 12.905735460026044,
-      "conformal_winkler_90": 17.524373477768698
+      "aql": 1.2540463909079733,
+      "mae": 2.9211652118018754,
+      "success_rate": 89.40919037199124,
+      "winkler_raw": 20.253293722402915,
+      "conformal_coverage_90": 91.90371991247264,
+      "conformal_width_90": 13.90117444486828,
+      "conformal_winkler_90": 18.203350908322268
     },
     "ProposedMethodHier": {
-      "aql": 1.2333523646462272,
-      "mae": 2.8500182121111735,
-      "success_rate": 89.38730853391685,
-      "winkler_raw": 18.980815969782533,
-      "conformal_coverage_90": 91.46608315098467,
-      "conformal_width_90": 13.220524929388874,
-      "conformal_winkler_90": 17.644664424129594
+      "aql": 1.2600985821944763,
+      "mae": 2.8799363243348766,
+      "success_rate": 91.2253829321663,
+      "winkler_raw": 19.398604933911,
+      "conformal_coverage_90": 91.24726477024069,
+      "conformal_width_90": 12.904040112855402,
+      "conformal_winkler_90": 18.003557374367826
     },
     "MarketRuleEmbedded": {
-      "aql": 1.229704409415192,
-      "mae": 3.2564769147261488,
-      "success_rate": 67.17724288840262,
-      "winkler_raw": 24.161768063103995,
-      "conformal_coverage_90": 93.43544857768052,
-      "conformal_width_90": 13.989338958762277,
-      "conformal_winkler_90": 19.121883983505764
+      "aql": 1.235001415334544,
+      "mae": 3.138678628688829,
+      "success_rate": 77.48358862144421,
+      "winkler_raw": 20.952286240903977,
+      "conformal_coverage_90": 91.37855579868707,
+      "conformal_width_90": 12.752838726161254,
+      "conformal_winkler_90": 18.167419796039717
     },
     "MarketRuleEmbeddedHier": {
-      "aql": 1.3276697198822212,
-      "mae": 3.07920525204268,
-      "success_rate": 84.79212253829321,
-      "winkler_raw": 22.32089327270047,
-      "conformal_coverage_90": 88.8402625820569,
-      "conformal_width_90": 13.622684575118441,
-      "conformal_winkler_90": 20.8382384423354
+      "aql": 1.2763063919947129,
+      "mae": 2.8863638753373033,
+      "success_rate": 83.7417943107221,
+      "winkler_raw": 21.096986633061512,
+      "conformal_coverage_90": 91.72866520787746,
+      "conformal_width_90": 13.219216378608342,
+      "conformal_winkler_90": 18.108306158258696
     },
     "BaselineMLP": {
-      "aql": 1.404807157077276,
-      "mae": 3.345768029232972,
-      "success_rate": 85.44857768052516,
-      "winkler_raw": 21.68859364404557,
-      "conformal_coverage_90": 94.9671772428884,
-      "conformal_width_90": 16.506061263671,
-      "conformal_winkler_90": 18.883034948621518
+      "aql": 1.4037748911154817,
+      "mae": 3.114457500412453,
+      "success_rate": 87.3741794310722,
+      "winkler_raw": 23.339723394802185,
+      "conformal_coverage_90": 94.26695842450765,
+      "conformal_width_90": 17.77482924373034,
+      "conformal_winkler_90": 20.613287362107762
     }
   },
   "verdicts": {
     "GodmodeA": {
       "pass": false,
       "reasons": [
-        "cov=88.84% (>=90: False)",
-        "cal-winkler=22.345 vs LQR 19.864 (<=: False)",
-        "aql=1.159 vs LQR 1.167 (within .02: True)"
+        "cov=90.50% (>=90: True)",
+        "cal-winkler=20.135 vs LQR 20.026 (<=: False)",
+        "aql=1.155 vs LQR 1.171 (within .02: True)"
       ]
     },
     "GodmodeB": {
       "pass": false,
       "reasons": [
-        "cov=88.84% (>=88: True)",
-        "cal-winkler=18.359 vs SPARC 17.524 (<: False)"
+        "cov=92.60% (>=88: True)",
+        "cal-winkler=18.379 vs SPARC 18.203 (<: False)"
       ]
     },
     "GodmodeC": {
-      "pass": true,
+      "pass": false,
       "reasons": [
-        "cov=89.93% (>=88: True)",
-        "aql=1.228 vs full 1.213 (within .02: True)",
-        "cal-winkler=18.366 vs full 18.863 (<=: True)"
+        "cov=90.77% (>=88: True)",
+        "aql=1.256 vs full 1.299 (within .02: False)",
+        "cal-winkler=18.060 vs full 18.262 (<=: True)"
       ]
     },
     "Godmode": {
       "pass": false,
       "reasons": [
-        "cov=91.03% (>=88: True)",
-        "cal-winkler=18.863 vs SPARC 17.524 (<=: False)"
+        "cov=92.08% (>=88: True)",
+        "cal-winkler=18.262 vs SPARC 18.203 (<=: False)"
       ]
     }
   },
-  "probes_passed": [
-    "GodmodeC"
-  ]
+  "probes_passed": []
 }
