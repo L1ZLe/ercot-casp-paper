@@ -48,7 +48,7 @@ BASELINES = [
     "MarketRuleEmbeddedHier",
     "BaselineMLP",
 ]
-SEED = 42
+SEEDS = [42, 43, 44, 45, 46]
 
 
 def load_blocks(per_seed_dir, method_list, run_tag="main", pair="HB_HUBAVG_HB_PAN"):
@@ -63,6 +63,11 @@ def load_blocks(per_seed_dir, method_list, run_tag="main", pair="HB_HUBAVG_HB_PA
             if os.path.exists(tf):
                 block[m][seed] = (np.load(f), np.load(tf))
     return block
+
+
+def _mean_row(runs):
+    keys = runs[0].keys()
+    return {k: float(np.mean([r[k] for r in runs])) for k in keys}
 
 
 def summarize(pred, tgt, config):
@@ -153,12 +158,15 @@ def main():
     rows = {}
     for m in list(METHOD_LABELS) + BASELINES:
         block = probes if m in METHOD_LABELS else baselines
-        if SEED not in block.get(m, {}):
-            continue
-        pred, tgt = block[m][SEED]
-        rows[m] = summarize(pred, tgt, config)
+        runs = []
+        for seed in SEEDS:
+            if seed in block.get(m, {}):
+                pred, tgt = block[m][seed]
+                runs.append(summarize(pred, tgt, config))
+        if runs:
+            rows[m] = _mean_row(runs)
 
-    # ---- Verdicts (design §5 pass/fail lines) ----
+    # ---- Verdicts (design §5 pass/fail lines), on 5-seed means ----
     ref_A = rows.get("BaselineLQR")
     ref_B = rows.get("ProposedMethod")
     ref_full = rows.get("Godmode")
@@ -174,12 +182,12 @@ def main():
 
     doc = {
         "_meta": {
-            "schema": "godmode-probe-verdict-v1",
-            "seed": SEED,
+            "schema": "godmode-probe-verdict-v2",
+            "seeds": SEEDS,
             "note": (
-                "Calibrated metrics recomputed from per-seed .npy "
-                "(split-conformal band, cal_frac=0.5). Baselines = locked "
-                "seed-42 main-run predictions on the same test split."
+                "5-seed mean of calibrated metrics computed from per-seed .npy "
+                "(split-conformal band, cal_frac=0.5), 24h constraint lead (ADR-0013). "
+                "Baselines = locked main-run predictions on the same test split per seed."
             ),
         },
         "methods": {k: v for k, v in rows.items()},

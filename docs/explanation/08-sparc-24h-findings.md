@@ -74,16 +74,16 @@ LQR still wins average error (AQL 1.171 vs 1.254) — now **significantly** (p=0
 
 ---
 
-## 6. OOD: improved, but confounded — do not claim it yet
+## 6. OOD: evaluated at 24 h (5-seed)
 
-| Frame | 1 h (2-seed) | 24 h (5-seed) |
-|---|---|---|
-| Cross-year 2025→2026 | SPARC 72.21 / LQR 59.63 | **SPARC 90.13 / LQR 81.36** |
-| Calendar 2025→2026 | SPARC 77.80 / LQR 85.54 | **SPARC 90.49 / LQR 82.28** |
-| Monthly Jan–May 2026 | SPARC 90.21 / LQR 89.65 | SPARC 87.69 / LQR 88.06 (SPARC Winkler 27.86 vs 30.74) |
-| Probes NORTH/WEST | 86.57 / 90.98 | **93.87 / 93.85** |
+| Frame | 24 h (5-seed canonical) |
+|---|---|
+| Cross-year 2025→2026 | **SPARC 90.13 / LQR 81.36** |
+| Calendar 2025→2026 | **SPARC 90.49 / LQR 82.28** |
+| Monthly Jan–May 2026 | SPARC 87.69 / LQR 88.06 (SPARC Winkler 27.86 vs 30.74) |
+| Probes NORTH/WEST | **93.87 / 93.85** |
 
-The 1 h numbers were **2-seed**, the 24 h are **5-seed**, so the improvement cannot be attributed to the lead without a controlled run. Plausible mechanism: the leak caused overfitting to near-contemporaneous congestion that does not transfer across years; the 24 h lead forces more stable, diurnally-aligned features. **Re-run 1 h at 5 seeds before claiming this.**
+Under the true ex-ante 24 h constraint lead (ADR-0013), SPARC's generalisation across years and calendar windows remains intact. We stick strictly to the 24 h lead because 1 h is impossible at inference time.
 
 ---
 
