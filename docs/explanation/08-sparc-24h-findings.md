@@ -85,6 +85,8 @@ LQR still wins average error (AQL 1.171 vs 1.254) — now **significantly** (p=0
 
 Under the true ex-ante 24 h constraint lead (ADR-0013), SPARC's generalisation across years and calendar windows remains intact. We stick strictly to the 24 h lead because 1 h is impossible at inference time.
 
+**The calibration edge generalizes.** This is the important one. Our core claim is "SPARC is better calibrated", and here it survives a full-year distribution shift (train 2025 → test 2026) with an ~8–9 pp coverage lead over the linear baseline. That upgrades the claim from "works in-sample" to "works out-of-sample" — much harder to attack.
+
 ---
 
 ## 7. What is still on the 1 h lead (stale)
