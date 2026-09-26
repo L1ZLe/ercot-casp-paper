@@ -137,7 +137,46 @@ _No duplication: each topic lives in the doc below (all current as of 2026-09-26
 | **Metric definitions** — AQL, coverage, Winkler-90, CRPS, AQCR, PIT/KS, efficiency | `docs/explanation/03-paper-framing.md`, `docs/explanation/07-sparc-briefing-full.md` |
 | **Data & reproducibility** — ERCOT DAM files, 3 pairs, 2025/2026, SHA256 checksums, venv | `AGENTS.md`, `docs/adr/0003-data-provenance-and-checksum-verification.md` |
 | **Contribution / novelty** | `docs/research_brief.md` |
-| **Target venue** | `docs/adr/0005-one-paper-neurips-uq-energy-framed.md` (records the original NeurIPS/UQ target; the built draft used the AISTATS template — venue under revision) |
+| **Target venue** | **AISTATS (PMLR)** — `docs/adr/0015-target-venue-aistats.md` (supersedes ADR-0005's NeurIPS/UQ target) |
+
+---
+
+## 5c. Nuances from the draft — don't miss these
+
+_Subtle points the current draft gets wrong, or that a writer could easily miss. The draft itself is stale (1 h / 2-seed); every number must be rebuilt from `results.json`._
+
+### Code-vs-text mismatches (fix before submitting)
+1. **Inference sorting is claimed but not implemented.** The draft's Method says residual crossings "are resolved by sorting the seven quantile estimates" at inference; the shipped code (`code/models.py`, `code/main.py`) does **not** sort. Either implement it (then AQCR ≈ 0 at inference) or drop the claim. As shipped, the reported AQCR is the **pre-sort** rate.
+2. **AQCR definition disagrees.** The draft defines AQCR over **2 pairs** (`q0.10 > q0.50`, `q0.50 > q0.90`); `code/build_results.py` computes it over **all 6 adjacent pairs** (`np.any(diff < 0)`). Align text to code.
+3. **Dataset span and split sizes are wrong.** The draft says "full calendar year 2026 (8,760 h)" with a 70/15/15 of ≈6,132 / 1,314 / 1,314. Actual: **2026-01-01 → 2026-09-14, 6,088 valid hourly samples → 4,261 / 913 / 914**. Fix both.
+
+### Hardware & protocol
+4. **CPU-only, no GPU** — AMD Ryzen 7 5735HS, 12 GB RAM; "no GPU was used for any reported result". All baselines on the same hardware. The efficiency thesis rests on this.
+5. Adam, lr 1e-3, β=(0.9, 0.999), batch 64, cosine annealing, **max 20 epochs**, seeds {42–46}; report **mean ± std**.
+6. **Early-stopping contradiction**: "early stopping after 20 epochs without improvement, max 20 epochs" — patience equals the cap, so early stopping never triggers. Fix the wording.
+7. **LA-CASF (λ=0.1) is training-only** — never a reported metric (ADR-0004).
+8. Grid: 7 quantiles {0.10, 0.25, 0.45, 0.50, 0.55, 0.75, 0.90}; the penalty spans the **6 adjacent pairs**.
+9. `K=50` constraint slots, zero-padded; `K_t=0` → a learned "no-congestion" embedding.
+10. Slot features = `[μ, kV-class one-hot, clipped flow ratio]` (3-d → 8-d projection); identity embedding 8-d **mean-pooled**.
+11. Temporal = Fourier sin/cos of hour & day-of-week, plus month and an **ERCOT holiday indicator** (18-d).
+
+### Metrics
+12. **Primary = coverage + Winkler**; CRPS/AQL/MAE/RMSE are secondary.
+13. **MAPE is excluded** (SPARC's 394.75% shows the pathology near zero denominators).
+14. **Spike coverage 55.9%** — a diagnostic only; tail behaviour is **out of scope**.
+15. **Naive baselines have zero-width intervals** (coverage ~0%) — degenerate; Winkler punishes them.
+16. **CRPS vs LQR is not significant** (p≈0.46); coverage (t=6.50, p=0.003) and Winkler (t=4.32, p=0.012) are. Multiple-comparison correction (Bonferroni) is mentioned.
+
+### Efficiency & data
+17. The efficiency ratio **depends on the comparison**: ≈3.9× fewer params than LSTM (34,952), ≈7× vs MLP (64,456), ≈8.7× vs Transformer (78,536).
+18. Target = `LMP_HB_PAN − LMP_HB_HUBAVG`; **HB_HUBAVG is a Houston-zone hub average, HB_PAN a single Panhandle node**. Corridor rationale: wind export West Texas → load centres.
+19. 3 pairs; the 2 extra probes are **proposed-model-only** (no baselines).
+20. Data source: ERCOT MIS public archive; constraint availability tied to **FERC Order 881**; 2025 data for the cross-year probe.
+
+### Paper hygiene
+21. Table labels are `@@TABLABEL@@` placeholders filled by `build_tex.py` / `build_main.py`.
+22. The draft compares **8 baselines**; `results.json` has **12+** (deep nets added later). Decide the comparison set.
+23. **Every number in the draft is stale** — rebuild from `results.json` (24 h / 5-seed).
 
 ---
 

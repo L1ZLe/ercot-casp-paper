@@ -2,7 +2,7 @@
 # 5. One paper: NeurIPS / UQ-application, energy-framed, calibration-first
 
 - **Date**: 2026-09-03
-- **Status**: Accepted
+- **Status**: Superseded by ADR-0015
 - **Source**: this repo's AGENTS.md project description; planning decision log
 
 ## Decision
