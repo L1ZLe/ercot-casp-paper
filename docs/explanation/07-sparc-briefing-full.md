@@ -70,7 +70,7 @@ The core idea: **model how the market forms prices, not just the price history.*
 
 "(If asked: yes, in principle you could differentiate through SCED, but that needs a full, maintainable ERCOT SCED model with complementarity constraints — a different and much larger program. The clearing's outputs are already published.)"
 
-"The anchor — Yu et al., Austria — can embed a formula, because their price is a known piecewise settlement rule; they re-implement it as differentiable layers. Their head is hard-hierarchical, so crossing is zero by construction. But they never report coverage or Winkler. **Our move: output-conditioning.** We condition on the clearing's **past published outputs** — the most recent snapshot strictly before the target hour, because the target hour's own μ exists only after that hour clears and would leak. We embed **no rule**; the identity is used as structure."
+"The anchor — Yu et al., Austria — can embed a formula, because their price is a known piecewise settlement rule; they re-implement it as differentiable layers. Their head is hard-hierarchical, so crossing is zero by construction. But they never report coverage or Winkler. **Our move: output-conditioning.** We condition on the clearing's **past published outputs** — the previous day's clearing (`t − 24 h`, ADR-0013) — because the target hour's own μ exists only after that hour clears and would leak, and same-day prior hours are contemporaneous with the target in a daily-clearing market. We embed **no rule**; the identity is used as structure."
 
 ### [S7] The model — [SHOW D3]
 

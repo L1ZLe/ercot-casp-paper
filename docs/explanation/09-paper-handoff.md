@@ -8,11 +8,15 @@ _2026-09-26 · For the paper writer. Every number here is canonical: 5 seeds (42
 
 ## 1. The one-paragraph pitch
 
+_The 60-second version — what we predict, how, and the headline result._
+
 We predict the **full predictive distribution** (7 quantiles) of the ERCOT **day-ahead LMP spread** between two settlement points, by **conditioning on the market clearing's published outputs** — which transmission constraints bind and their shadow prices (μ) — instead of treating the price as a generic time series. The spread cancels the common energy term, leaving a congestion residual `Σ_k ΔSF_k·μ_k`; the model **learns the exposure weights ΔSF as attention**. It is small (8,978 params), CPU-trainable, and **best-calibrated** among 12+ baselines: coverage **89.4%**, best width-aware Winkler **20.25**, best coherence (AQCR **0.11%**), and its calibration edge is **causal** (removing attention drops coverage 89.4 → 77.5) and **generalizes** (cross-year 90.1% vs LQR 81.4%). The headline intellectual result is the **metric-paradox**: AQL (average error) and calibrated-Winkler disagree on the winner — which model is "best" depends on the metric.
 
 ---
 
 ## 2. Canonical numbers — primary pair `HB_HUBAVG→HB_PAN`
+
+_The locked 5-seed, 24 h numbers to quote. Anything else is superseded._
 
 ### 2a. Raw (in-sample)
 | method | AQL ↓ | coverage % ↑ | Winkler ↓ | AQCR % ↓ | width90 | CRPS ↓ | MAE ↓ |
@@ -70,6 +74,8 @@ SPARC **8,978** · iTransformer 13,760 · LSTM 34,952 · TimesNet 40,584 · MLP 
 
 ## 3. Out-of-distribution / transfer (5-seed)
 
+_Does the calibration edge survive a regime shift, and what does snapshot staleness cost?_
+
 | Frame | SPARC | BaselineLQR |
 |---|---|---|
 | Cross-year 2025→2026 | **90.13** | 81.36 |
@@ -85,6 +91,8 @@ Winkler as the constraint snapshot ages: **18.43 (1 h) → 19.74 (2 h) → 20.38
 ---
 
 ## 4. The God model (fusion) — negative result at 24 h / 5 seeds
+
+_Ten rival designs tested and rejected — our strongest robustness evidence._
 
 Ten directions tested; **none significantly beats SPARC** (`probes_passed: []`). Closest is identity-only (probe C, cal-Winkler 18.06) vs SPARC 18.00/18.20 — inside noise.
 
@@ -107,6 +115,8 @@ Only **α (width envelope)** survives — a property, not a win. Source: `godmod
 
 ## 5. Claims we make / don't
 
+_What the paper asserts — and what it deliberately does not._
+
 **Make:** best-calibrated; best coherence; competitive on error, beats all deep baselines; ~7–9× smaller; causal mechanism; edge generalizes.
 **Don't:** no AQL superiority over LQR (LQR is significantly better); no spike/tail claim (out of scope); never "PIT-uniform"; no "convergence"; no trading-PnL claim (split out).
 
@@ -114,7 +124,26 @@ Only **α (width envelope)** survives — a property, not a win. Source: `godmod
 
 ---
 
+## 5b. Background, methods & data — where to look
+
+_No duplication: each topic lives in the doc below (all current as of 2026-09-26)._
+
+| topic | canonical doc |
+|---|---|
+| **Market setup** — `LMP_i = λ + Σ_k SF_{k,i}·μ_k`; spread = `Σ_k ΔSF_k·μ_k` (congestion differential); shadow price; SCED; why no closed-form exists in a nodal market (→ output-conditioning) | `docs/explanation/07-sparc-briefing-full.md`, `docs/research_brief.md` |
+| **Anchor / positioning** — Yu et al. MRINN (Austria); formula-embedding vs output-conditioning | `docs/explanation/04-casp-vs-mrinn.md` |
+| **Model design** — inputs (top-50 constraint slots, mean-pooled identity, μ pathway, Fourier, lags 24/48/168, path embedding), attention query/key/value, soft head + LA-CASF | `docs/explanation/07-sparc-briefing-full.md`, `docs/explanation/04-casp-vs-mrinn.md` |
+| **Protocol** — chronological 70/15/15, CPU, 7-quantile grid, constraint-availability rule | `docs/adr/0004-experiment-protocol-cpu-chronological-split-pure-pinball-aql.md`, `docs/adr/0013-day-ahead-constraint-availability-t24h.md`, `docs/explanation/07-sparc-briefing-full.md` |
+| **Metric definitions** — AQL, coverage, Winkler-90, CRPS, AQCR, PIT/KS, efficiency | `docs/explanation/03-paper-framing.md`, `docs/explanation/07-sparc-briefing-full.md` |
+| **Data & reproducibility** — ERCOT DAM files, 3 pairs, 2025/2026, SHA256 checksums, venv | `AGENTS.md`, `docs/adr/0003-data-provenance-and-checksum-verification.md` |
+| **Contribution / novelty** | `docs/research_brief.md` |
+| **Target venue** | `docs/adr/0005-one-paper-neurips-uq-energy-framed.md` (records the original NeurIPS/UQ target; the built draft used the AISTATS template — venue under revision) |
+
+---
+
 ## 6. Key files & commands
+
+_Where the numbers live and how to regenerate them._
 
 | purpose | path |
 |---|---|
@@ -130,6 +159,8 @@ Only **α (width envelope)** survives — a property, not a win. Source: `godmod
 Regenerate everything (hours): `bash godmode/run_all_5seed.sh` (godmode only) or the main pipeline at `24 h` via `code/main.py` + the `run_*.py` runners + `code/build_results.py`.
 
 ## 7. Do-not list
+
+_The mistakes that would get the paper rejected._
 
 - ❌ Quote any `1 h` or `2-seed` number.
 - ❌ Cite `AIstats research paper (outdated)/` (removed from the reference set).
