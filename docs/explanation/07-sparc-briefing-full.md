@@ -129,7 +129,7 @@ The core idea: **model how the market forms prices, not just the price history.*
 
 "I noticed that **every** model wins exactly one axis — linear wins average error, persistence wins MAE, the physics rule is a free prior, the monotone head rescues coherence, conformal guarantees coverage. So I tried to fuse the winners into one model: a linear spine plus an attention residual plus a physics bias, with a monotone head and conformal on top — scored on calibrated Winkler."
 
-"The result was **negative**. Ten directions, none beats SPARC at five-seed significance. **1** linear spine + market prior + conformal: best AQL (1.159) but Winkler 22.35. **2** time inside the attention query: 18.36 vs SPARC 17.52. **3** identity-only: 18.37. **4** full additive fusion: 18.86. **5** train on the reported metric: coverage 87.1%, AQL 1.264, Winkler 18.19. **6** feature-adaptive conformal: width 14.59, coverage 86.4%, Winkler 20.29. **7** level/spread factorization: seed-42 looked better but 5-seed AQL 1.2786 vs 1.2094, p=0.030. **8** nested normalized conformal: width 34.14, Winkler 38.70. **9** pointwise min-width routing: coverage collapsed to 64.66%. **10** crossing-penalty tuning: 5-seed 17.772 vs 17.702. And the other paper's rule variants — market-rule-embedded 18.83, hierarchical 19.54 — both worse than SPARC (godmode baseline 17.52 under its own conformal split)."
+"The result was **negative**. Ten directions, none beats SPARC at five-seed significance, at the 24 h lead. **1** linear spine + market prior + conformal: cal-Winkler 20.14 (cov 90.50). **2** time inside the attention query: 18.38 vs SPARC 18.20. **3** identity-only: 18.06. **4** full additive fusion: 18.26. **5** train on the reported metric (Move D): 18.34 but coverage 87.9 (under-covers). **6** feature-adaptive conformal (CQR): 17.38 but coverage 85.3 (invalid). **7** level/spread factorization (MV): 18.16 vs 18.20, p=0.88. **8** nested normalized conformal (β): PIT worse (KS 5e-28 vs 5.6e-12), RULE OUT. **9** pointwise min-width routing (γ): coverage collapsed to 73.1%, RULE OUT. **10** crossing-penalty tuning (λ): 18.08 vs 18.20, p=0.41. The market-rule-embedded variants (18.17, 18.11) are also within noise of SPARC."
 
 "That negative result is actually the **strongest evidence** in the paper: every rival explanation is tested and ruled out. When a reviewer asks 'did you try X?', the answer is on the chart."
 
@@ -197,8 +197,8 @@ Probes NORTH **93.87%** / WEST **93.85%** · monthly Jan–May **87.69 vs 88.06*
 ### Sensitivity (5-seed) — constraint leads 1, 2, 4, 12, 24 h
 Coverage 88.82 → 89.10 → 87.40 → 86.65 → 89.41; Winkler 18.43 → 19.74 → 20.38 → 21.16 → **20.25**. Lag sets 24 / 24-48 / 24-48-168: coverage 85.84 / 86.04 / 89.41; Winkler 22.27 / 21.92 / 20.25. **Calibration degrades as the snapshot ages (Winkler rises)** — report this honestly as the cost of realistic constraint availability.
 
-### Godmode (godmode's own conformal, run at 1 h lead; SPARC baseline 17.52 there)
-10 directions: A 22.35 · B 18.36 · C 18.37 · full 18.86 · D 18.19 · E 86.4%/14.59 · MV p=0.030 · β width 34.14 · γ coverage 64.66% · λ 17.772 vs 17.702 — all fail to beat SPARC.
+### Godmode (godmode's own conformal, 24 h / 5-seed; SPARC soft 18.20 / hard 18.00)
+10 directions: A 20.14 · B 18.38 · C 18.06 · full 18.26 · D 18.34 (cov 87.9) · E cov 85.3 · MV 18.16 (n.s.) · λ 18.08 (n.s.) · β RULE OUT · γ cov 73.1 RULE OUT — all fail to beat SPARC.
 
 ---
 

@@ -54,7 +54,7 @@ _Tracking key: status = `[ ]` todo / `[x]` done. M-numbers are the canonical mod
 ---
 
 ## M8 — Conformal quantile regression around LQR (CQR/about LQR)
-- **What:** Wrap `BaselineLQR` with a conformal calibration step: on a calibration split, compute residual scores and form corrected 90% intervals; evaluate coverage + width on test. Compare vs SPARC (87.9% at IW 14.23).
+- **What:** Wrap `BaselineLQR` with a conformal calibration step: on a calibration split, compute residual scores and form corrected 90% intervals; evaluate coverage + width on test. Compare vs SPARC (89.4% raw coverage; calibrated Winkler 18.20 vs LQR's 20.03).
 - **Why:** Answers the reviewer's exact question — "could LQR + conformal wrap reach 90% coverage easily?" Either it only does so at far wider width (proves SPARC's calibration is real, not a wider box) or it matches (a finding to report). Closes THE logical hole; lets us delete the conformal limitation line.
 - **Code destination:** **new** `code/conformal.py`.
 - **Status:** [ ]

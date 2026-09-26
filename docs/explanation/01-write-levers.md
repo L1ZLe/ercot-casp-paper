@@ -26,14 +26,14 @@ Each lever is tagged: **✅ standard-legitimate · ⚠️ use-with-care · ❌ b
 
 ## C. Reframe each known loss into a decision-relevant win
 
-- **C1 ✅ AQL (1.335 vs 1.315) → "we trade a marginal pinball cost for the coverage the hedger needs, and width is reported so it reads as a calibration gain, not a wider box."** (Already in paper.)
+- **C1 ✅ AQL (1.254 vs 1.171) → "we trade a marginal pinball cost for the coverage the hedger needs, and width is reported so it reads as a calibration gain, not a wider box."** (Already in paper.)
 - **C2 ✅ Spike MAE (lose to trees/MLP) → spike-hour *interval coverage*.** "The median is worse on extreme hours, but the 90% interval *bounds* the extreme hours reliably." The single best reframe in the whole list.
 - **C3 ✅ "worse median on spikes" → "calibration objective targets coverage, not median tail sharpness — a stated trade."** Honest, shows you understand the metric space.
 
 ## D. Ablations → mechanism story
 
 - **D1 ✅ Frame ablations as "division of labor," not "my model needs everything."** "Temporal buys point accuracy; constraint-attention/identity buys calibration." Nuanced > overclaim; answers "your ablation is better than your model."
-- **D2 ✅ Handle WOPathEmbed (AQL 1.299 < flagship 1.335) head-on.** Report it as evidence of headroom / a variant, or make it the flagship if clearly better. Never pretend it doesn't exist.
+- **D2 ✅ Handle WOPathEmbed (AQL 1.191 < flagship 1.254) head-on.** Report it as evidence of headroom / a variant, or make it the flagship if clearly better. Never pretend it doesn't exist.
 - **D3 ✅ Non-crossing: measure AQCR across all methods, don't assert.** Adopt-the-hierarchical-head is the fallback we already hold. Either result is publishable.
 
 ## E. Statistical presentation

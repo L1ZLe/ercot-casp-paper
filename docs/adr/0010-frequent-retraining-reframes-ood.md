@@ -4,6 +4,8 @@
 - **Status**: Accepted
 - **Source**: code/run_cross_year.py, code/run_monthly.py, code/run_calendar_oov.py, config.py (window)
 
+> **Updated 2026-09-26:** the monthly/cross-year numbers cited below are superseded by the 24 h 5-seed canonical run (see ADR-0014 and `code/results/results.json`). The decision (frequent retraining reframes OOD) stands.
+
 ## Decision
 
 The model is **small and cheap to retrain** (8,978 params, CPU-minutes), so the deployment pattern is **frequent retraining** on recent data — not "train once, then generalize forward a year." Therefore the paper's **primary out-of-sample evidence is the near-range, frequently-retrained OOD** (monthly / rolling windows), and the **single full-year 2025→2026 cross-year transfer is de-emphasized as an over-harsh stress limit, not the main generalizability claim.**

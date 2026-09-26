@@ -2,6 +2,8 @@
 
 _Companion research brief · ERCOT day-ahead market, 2026 settlement data, all results from a reproducible 5-seed CPU experiment._
 
+> **Updated 2026-09-26.** All numbers below use the canonical **24 h (previous-day) constraint lead** (ADR-0013) and the 5-seed protocol. Earlier 1 h figures are superseded. See `docs/explanation/08-sparc-24h-findings.md` for the full change record.
+
 ---
 
 ## Research idea and gap
@@ -85,36 +87,37 @@ We therefore lead with these reliability/coherence metrics rather than with a ra
 
 - The proposed model's objective is reliably calibrated intervals across the band — a hedger's risk-sizing needs — not minimizing mean error on a few extreme point hours, which a calibrated interval is not designed to win. The tail story is told the right way: whether the 90% interval bounds the extreme hours, not the median error on them
 
-- Even a conformal recalibration wrapper around the linear baseline — the strongest fix one could apply to it — reaches only 79.3% coverage (still under the 90% target), while the proposed model's raw calibration (81.5%) exceeds it without any post-hoc wrapper. The edge is intrinsic to the model, not something a generic conformal patch on a baseline can match
+- Even a conformal recalibration wrapper around the linear baseline — the strongest fix one could apply to it — equalizes coverage (91.8%) but leaves a worse width-aware score (Winkler 20.03 vs the proposed model's 18.20). The calibration edge is intrinsic to the model, not something a generic conformal patch on a baseline can match
 
 - The proposed model is the best-calibrated and most consistently coherent model among all compared methods, across in-sample and out-of-sample windows. No forecast is distributionally perfect; what matters operationally is reliable intervals at the stated level, which the proposed model delivers better than every baseline
 
 ---
 
-## Empirical findings (5-seed means, held-out settings)
+## Empirical findings (5-seed means, canonical 24 h constraint lead)
 
-Reference implementation: several baselines, five seeds (42-46), chronological (leakage-safe) split, CPU. Numbers averaged across seeds, taken from the locked reproducible results store.
+Reference implementation: several baselines, five seeds (42-46), chronological (leakage-safe) split, CPU, and the **24 h (previous-day) constraint lead** locked by ADR-0013. Numbers averaged across seeds, taken from the locked reproducible results store (`code/results/results.json`).
 
 ### In-sample reliability and accuracy
-- **Interval coverage (headline):** the proposed model's 90%-band success rate is **87.9%** vs linear 73.2%, MLP 84.4%, LSTM 80.5%, transformer 78.9%, RF 42.6% (nominal 90%).
-- **Width-aware score (Winkler):** proposed **20.72** vs linear 26.20, MLP 24.71 — the best calibration is not bought with excessive width.
-- **CRPS:** proposed 2.203 vs linear 2.148 (parity), MLP 2.718 (better).
-- **Average quantile loss (AQL):** proposed 1.335 vs linear 1.314 (paired t, p~0.196, not significant) — parity with the best linear baseline; beats all deep/tree baselines (MLP 1.639, LSTM 1.574, transformer 1.627).
-- **Mean absolute error:** proposed **3.199** vs linear 3.268, MLP 3.878, LSTM 3.951, transformer 4.118.
-- **Coherence (AQCR):** proposed **0.507%** crossing vs linear 17.79%, MLP 8.58%, LSTM 8.94%, transformer 2.30%, XGB 54%. Significant vs linear (p=0.037) and MLP (p=0.024).
+- **Interval coverage (headline):** the proposed model's 90%-band success rate is **89.4%** vs linear 73.1%, MLP 87.4%, LSTM 74.2%, transformer 76.7%, RF 32.2% (nominal 90%).
+- **Width-aware score (Winkler):** proposed **20.25** vs linear 24.43, MLP 23.34 — the best calibration is not bought with excessive width.
+- **CRPS:** proposed 2.074 vs linear 1.910 (parity), MLP 2.335 (better).
+- **Average quantile loss (AQL):** proposed 1.254 vs linear 1.171 (paired t, p=0.015 — the linear baseline is *significantly* better on average error); beats all deep/tree baselines (MLP 1.404, LSTM 1.460, transformer 1.440).
+- **Mean absolute error:** proposed **2.921** vs linear 2.907, MLP 3.114, LSTM 3.669, transformer 3.837.
+- **Coherence (AQCR):** proposed **0.11%** crossing vs linear 31.99%, MLP 15.08%, LSTM 11.30%, transformer 0.02%, XGB 62.2%. The hard (hierarchical) head is 0.00% by construction.
 - **Efficiency:** proposed **8,978** parameters vs LSTM 34,952, MLP 64,456, transformer 78,536.
-- **Significance:** success-rate advantage vs the best linear baseline t=6.50, p=0.003.
+- **Significance:** success-rate advantage vs the best linear baseline t=8.33, p=0.0011; the coverage margin over the MLP is *not* significant (p=0.125).
 
 ### Mechanism evidence (with numbers)
-- Attention concentrates on the top-3 shadow-price slots at **~0.23-0.26 (~12x the uniform baseline 0.020)**, rising to **0.257 at extreme congestion** (max shadow price 84.8).
-- **Ablation:** removing the constraint/attention-weighting component drops calibration **87.9 -> 78.6** in-sample and **87.8 -> 79.6** on the near-range OOD window — the constraint-weighting drives the reliability edge, not decorative.
+- Attention concentrates on the top-3 shadow-price slots at **~0.23-0.26 (~12x the uniform baseline 0.020)**, rising to **0.260 at extreme congestion** (max shadow price 84.8).
+- **Ablation:** removing the constraint/attention-weighting component drops calibration **89.4 -> 77.5** in-sample — the constraint-weighting drives the reliability edge, not decorative.
 
 ### Out-of-sample, out-of-distribution (with numbers)
-- Because the model is cheap to retrain, the decision-relevant OOD test is **near-term (rolling-window / seasonal) transfer**. Across seasonal windows the proposed model is best-calibrated in all three: **Jan-May 87.8%, Apr-Jul 92.7%, Jun-Aug 62.5%** (all methods drop in Jun-Aug). The best *point-error* method varies by season (proposed / linear / MLP).
-- **Frame-robustness:** on an unfavorable inter-year, same-calendar held-out window, the proposed model stays better-calibrated on a width-aware basis: success **84.9%** vs linear 80.6%, Winkler **32.08** vs 37.89.
+- Because the model is cheap to retrain, the decision-relevant OOD test is **near-term (rolling-window / seasonal) transfer**. On the canonical near-range window (monthly Jan-May 2026) the proposed model holds **87.7%** coverage vs linear 88.1%, with a better width-aware score (Winkler **27.86** vs 30.74) — coverage parity, width-efficiency lead.
+- **Frame-robustness:** on an unfavorable inter-year, same-calendar held-out window, the proposed model stays better-calibrated: success **90.5%** vs linear 82.3%; full cross-year **90.1%** vs 81.4%.
+- **Cross-pair probes:** HB_HUBAVG→HB_NORTH **93.9%**, HB_HUBAVG→HB_WEST **93.9%** (proposed model only).
 
 ### Robustness checks
-- **Conformalized linear baseline:** a conformal wrapper raises the linear baseline's coverage from 73.2% to **79.3%** but it still under-covers the 90% target; the proposed model's raw coverage (**81.5%** on the same test half) remains above it.
+- **Conformalized linear baseline:** a conformal wrapper equalizes the linear baseline's coverage to 91.8% (width 12.71) but it still scores worse on a width-aware basis (Winkler 20.03 vs the proposed model's 18.20). The edge is intrinsic, not reproducible by a generic patch.
 - On the most extreme (spike) price events, some baselines have lower mean error on the spike hours; we do not claim tail point-error superiority.
 
 ---

@@ -80,7 +80,7 @@ The deepest conceptual difference is therefore **formula-embedding vs. output-co
 3. **Constraint attention:** slot encoder → key/value vectors; scaled dot-product attention `a_k = q_t^T h_k / √d`; softmax weights `α_k` interpreted as **learned incremental shift-factor differences**; latent congestion magnitude `m_k = ψ_μ(μ_k)`.
 4. **Spread construction:** `ŝ_t^con = Σ_k α_k m_k` — the attention-weighted congestion view, interpretable per hour by construction.
 5. **Temporal block:** 18-d temporal vector (Fourier within-day/weekly features + lags at 24/48/168 h) through a lightweight feedforward encoder.
-6. **Quantile head:** a **plain two-layer head** outputs the 7 quantiles; ordering is encouraged by a **soft non-crossing penalty** (LA-CASF, λ = 0.1) that is a *training objective only* (ADR-0004: never a reported metric). Measured coherence: AQCR = 0.51%.
+6. **Quantile head:** a **plain two-layer head** outputs the 7 quantiles; ordering is encouraged by a **soft non-crossing penalty** (LA-CASF, λ = 0.1) that is a *training objective only* (ADR-0004: never a reported metric). Measured coherence: AQCR = 0.11% (the hard head achieves 0.00% by construction).
 
 *Fidelity note:* [paper.tex](../../AIstats%20research%20paper%20(outdated)/paper.tex) ($ paper source) describes a "hierarchical non-crossing quantile head"; the shipped implementation in [code/models.py](../../code/models.py) is a plain head + soft penalty. This doc describes the implemented mechanism, matching ADR-0004.
 
@@ -90,15 +90,15 @@ The deepest conceptual difference is therefore **formula-embedding vs. output-co
 
 | Metric | SPARC | Best baseline (LQR) | Note |
 |---|---|---|---|
-| 90% interval coverage | **87.9%** | 73.2% | nominal target 90%; the headline decision-relevant win |
-| Winkler-90 (width-aware) | **20.72** | 26.20 | coverage not bought with excessive width |
-| AQL (pure pinball) | 1.335 | **1.315** | parity, not significant (paired t, p≈0.09–0.21) |
+| 90% interval coverage | **89.4%** | 73.1% | nominal target 90%; the headline decision-relevant win |
+| Winkler-90 (width-aware) | **20.25** | 24.43 | coverage not bought with excessive width |
+| AQL (pure pinball) | 1.254 | **1.171** | the linear baseline is significantly better (paired t, p=0.015) |
 | MAE / RMSE | **3.20 / 4.45** | 3.27 / 4.48 | best point accuracy of all compared methods |
-| AQCR | **0.51%** | 17.79% | coherence; penalized softly, measured |
+| AQCR | **0.11%** | 31.99% | coherence; penalized softly, measured (hard head 0.00% by construction) |
 | Params | **8,978** | – | ~4× smaller than LSTM, ~7× smaller than MLP |
 | Spike MAE | 10.00 | 10.05 | **not a SPARC advantage** (trees/MLP beat SPARC here) |
 
-- Ablations (division of labor): temporal stream dominates point error; constraint-attention and constraint-identity chiefly buy **calibration** (W/O attention drops coverage 87.9 → 78.6). Mechanism evidence: attention concentrates on top-3 shadow-price slots at ~0.23–0.26 (~12× uniform), rising at extreme congestion (see [research_brief.md](../research_brief.md)).
+- Ablations (division of labor): temporal stream dominates point error; constraint-attention and constraint-identity chiefly buy **calibration** (W/O attention drops coverage 89.4 → 77.5). Mechanism evidence: attention concentrates on top-3 shadow-price slots at ~0.23–0.26 (~12× uniform), rising at extreme congestion (see [research_brief.md](../research_brief.md)).
 
 ---
 
@@ -111,7 +111,7 @@ The deepest conceptual difference is therefore **formula-embedding vs. output-co
 | Rule-injection mechanism | **Formula-embedding**: known pricing map re-implemented as differentiable latent operators (softplus max/min, sqrt-abs, tanh-sign, stable div, softmax if-else) | **Output-conditioning**: no formula embedded; conditions on published clearing outputs (constraint identities, shadow prices, flow ratios) via attention |
 | Enabling assumption | Closed-form `P_t = g(F_t)` exists and is public | No closed form (SCED); the spread's energy term cancels by construction, so only the congestion residual is modeled |
 | Structural inductive bias | Exact piecewise rule structure (constants C1–C10, per-unit RobustScaler) | LMP decomposition / shift-factor interpretability of attention weights |
-| Quantile-coherence mechanism | **Hierarchical head** (median + softplus outward increments) → non-crossing *by construction* (AQCR 0.00) | **Soft penalty** (LA-CASF, λ=0.1, training-only) → measured AQCR 0.51% |
+| Quantile-coherence mechanism | **Hierarchical head** (median + softplus outward increments) → non-crossing *by construction* (AQCR 0.00) | **Soft penalty** (LA-CASF, λ=0.1, training-only) → measured AQCR 0.11% (hard-head variant 0.00%) |
 | Temporal modeling | Raw features with lookback N; scaling laws over N × horizon M | Fourier features + lags 24/48/168 h through a light feedforward encoder |
 | Interpretability | None per-sample; component-removal ablation only | Per-hour attention over constraints readable as shift factors (structural, not post-hoc) |
 | Evaluation lens | AQL/MAE/RMSE + AQCR, efficiency, scaling laws, component ablation; **no empirical coverage reported** | Calibration-first: coverage + Winkler + coherence + efficiency + near-term OOD transfer (ADR-0010, ADR-0011) |
@@ -128,9 +128,9 @@ The deepest conceptual difference is therefore **formula-embedding vs. output-co
 
 1. **Formula-embedding vs. output-conditioning (the deepest gap).** MRINN needs a written-down settlement formula to build its differentiable rule blocks. That formula exists in European balancing markets (and is the reason the approach is possible there). In a nodal market, no such formula exists — LMPs emerge from a security-constrained economic dispatch. SPARC's pivot is to condition on the *outputs* of the clearing instead (constraint bindings + shadow prices), which is the market-structure signal that is actually available ex-ante. See the repo's own prior framing in [AIstats research paper/paper_body.tex](../../AIstats%20research%20paper%20(outdated)/paper_body.tex): "conditioning on market-clearing outputs rather than embedding the clearing optimization." This is a genuinely different mechanism for injecting market structure, not a variant of the same idea.
 2. **Closed-form prior vs. learned prior.** MRINN hard-codes the exact rule (its coefficients are transformed market constants). SPARC *learns* the weighting of constraints (including which ones matter for a given pair and hour) rather than transcribing a formula — necessary because no formula exists, and it is what yields per-hour interpretability.
-3. **Quantile coherence: structural guarantee vs. soft penalty.** MRINN's hierarchical head guarantees ordering (AQCR = 0.00); SPARC uses a soft non-crossing penalty with measured 0.51% crossing. MRINN is stronger here *in principle*; SPARC's penalty keeps the head simple and trains end-to-end without the hierarchical-parameter constraint.
+3. **Quantile coherence: structural guarantee vs. soft penalty.** MRINN's hierarchical head guarantees ordering (AQCR = 0.00); SPARC uses a soft non-crossing penalty with measured 0.11% crossing (its own hard-head variant also reaches 0.00%). MRINN is stronger here *in principle*; SPARC's penalty keeps the head simple and trains end-to-end without the hierarchical-parameter constraint.
 4. **Interpretability by construction.** MRINN offers no per-sample attribution (its latent rule blocks are not inspected; the "transparency" is that the rule structure is known). SPARC's attention weights are readable by construction — "which constraints drive this hour's spread" — and verified to concentrate on top-shadow-price slots. This is a stated SPARC advantage (research_brief.md, 03-paper-framing.md).
-5. **Evaluation lens: calibration.** This is where SPARC's primary contribution sits. MRINN reports no empirical interval coverage at all. SPARC leads with coverage (87.9% vs 73.2%) and Winkler (20.72 vs 26.20) — the decision-relevant properties for a hedger sizing positions from the 0.10/0.90 quantiles — and pre-registers this lens ex-ante (ADR-0004, [03-paper-framing.md](03-paper-framing.md)).
+5. **Evaluation lens: calibration.** This is where SPARC's primary contribution sits. MRINN reports no empirical interval coverage at all. SPARC leads with coverage (89.4% vs 73.1%) and Winkler (20.25 vs 24.43) — the decision-relevant properties for a hedger sizing positions from the 0.10/0.90 quantiles — and pre-registers this lens ex-ante (ADR-0004, [03-paper-framing.md](03-paper-framing.md)).
 6. **Energy cancellation.** SPARC's target is a spread, so the energy term cancels by construction and the model focuses capacity on the congestion residual. MRINN has no analogous mechanism — it must model the full imbalance price, volatility spikes and all.
 7. **Efficiency magnitude.** Both are deliberately small, but MRINN is ~5× smaller (1,817 vs 8,978 params) and trains in ~40 s. SPARC's efficiency claim is against its own deep baselines (LSTM 34,952, MLP 64,456 — see [ADR-0006](../adr/0006-efficiency-measurement.md)), not against MRINN; the docs must not imply SPARC is leaner than MRINN.
 
@@ -147,7 +147,7 @@ The deepest conceptual difference is therefore **formula-embedding vs. output-co
 
 ## 7. Where MRINN retains an edge (honest counterweight)
 
-- **Structural non-crossing guarantee.** AQCR = 0.00 by construction vs SPARC's 0.51% measured (soft penalty). If guaranteed coherence becomes a requirement, MRINN's hierarchical head is the stronger mechanism.
+- **Structural non-crossing guarantee.** AQCR = 0.00 by construction vs SPARC-soft's 0.11% measured (the SPARC hard head also reaches 0.00, at comparable calibration). If guaranteed coherence becomes a requirement, the hierarchical head is the stronger mechanism — and SPARC has one.
 - **~5× fewer parameters and ~40 s training.** The efficiency thesis is stronger there, though both are far lighter than their DL baselines.
 - **Systematic sensitivity characterization.** The component-removal ablation and the N × M scaling laws (including the delayed-input reading) are more thorough than anything SPARC reports for its own feature blocks.
 - **Baseline breadth on the deep side.** MRINN benchmarked against modern deep forecasters (PatchTST, TimesNet, iTransformer, TimeXer); SPARC's deep-baseline set is LSTM/MLP/a causal Transformer.

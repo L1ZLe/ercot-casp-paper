@@ -5,15 +5,17 @@
 - **Primary artifact**: `code/results/results.json` (schema 1.3, generated 2026-09-13T22:20Z on the expanded 2026 data) plus the isolated Godmode probe outputs under `godmode/results/`
 - **Method name**: throughout, **SPARC** is the proposed model. In code it appears as `ProposedMethod` (and variants). The loss penalty acronym `LA-CASF` and the identifier `lambda_casf` are **different** tokens and are intentionally untouched.
 
+> **Updated 2026-09-26 (ADR-0013).** The canonical run now uses the **24 h** previous-day constraint lead, 5 seeds. Calibrated numbers below changed: SPARC calibrated-Winkler **18.00 (hard) / 18.20 (soft)** at 91.9% coverage; LQR **20.03**; AQL SPARC 1.254 vs LQR 1.171 (p=0.015, LQR significant); AQCR SPARC 0.11% vs LQR 31.99%; ablation coverage 89.4 -> 77.5; OOD cross-year 90.1% vs 81.4%, calendar 90.5% vs 82.3%, probes 93.9%. The 1 h figures retained in later sections are **superseded** — authoritative numbers are in `code/results/results.json` and `docs/explanation/08-sparc-24h-findings.md`.
+
 > **How to read this document.** It is written calibration-first, because that is the demonstrably-supported claim (ADR-0005). Everything below is an *evidence trail* assembled to make one statement: **SPARC is the best-calibrated forecaster; the "winner" of a comparison is decided by which metric is reported; no architecture or tuning we tested escapes the width/coverage trade-off at 5-seed significance.** Each section states a claim, then the numbers that support it, then the honest caveat. Do not treat a seed-42 number as a claim — the 5-seed + significance column is the only one that is load-bearing.
 
 ---
 
 ## 1. Executive summary
 
-On the expanded ERCOT 2026 snapshot (through 2026-09-14, the same data every model in this document was evaluated on), **SPARC (`ProposedMethod` + flat split-conformal recalibration) is the best-calibrated model**: lowest calibrated-Winkler (17.70) and near-target coverage (90.8%) across 5 seeds, beating every baseline and every ablated variant on the metric that a hedger actually sizes positions by.
+On the expanded ERCOT 2026 snapshot, **SPARC (`ProposedMethod` + flat split-conformal recalibration) is the best-calibrated model**: lowest calibrated-Winkler (18.00 hard / 18.20 soft) and near-target coverage (91.9%) across 5 seeds, beating every baseline and every ablated variant on the metric that a hedger actually sizes positions by.
 
-In the same run, **`BaselineLQR` posts the tightest calibrated width** (12.69) but the **worst Winkler for a tight model** (20.01). This is the metric-paradox made quantitative: *the narrowest interval is the least calibrated, and vice-versa.* The single most important, statistically-backed message of this experiment set is that **which model is declared "best" is an artifact of which metric the paper reports** — not of model quality.
+In the same run, **`BaselineLQR` posts the tightest calibrated width** (12.71) but the **worst Winkler for a tight model** (20.03). This is the metric-paradox made quantitative: *the narrowest interval is the least calibrated, and vice-versa.* The single most important, statistically-backed message of this experiment set is that **which model is declared "best" is an artifact of which metric the paper reports** — not of model quality.
 
 We then stress-tested this conclusion by attempting, in ten different first-principles directions, to build anything that beats SPARC + flat conformal on calibrated-Winkler. **All ten failed at 5-seed significance.** Those failures are the *evidence* that SPARC is at (or beyond) the calibration frontier, and they are a strength for the paper: the review-visible alternative explanations were explicitly tested and closed.
 
@@ -36,13 +38,13 @@ The entire experiment set can be read as: **AQL and calibrated-Winkler anti-corr
 
 | method | AQL↓ | cal-cov | cal-width | cal-Winkler↓ |
 |---|---|---|---|---|
-| **SPARC (ProposedMethod)** | **1.2094** | 90.81% | 13.40 | **17.70** |
-| ProposedMethodHier | 1.2499 | 90.81% | 13.04 | 18.72 |
-| BaselineLQR (tightest width) | **1.1705** | 91.68% | **12.69** | 20.01 |
+| **SPARC (ProposedMethod, soft)** | 1.2540 | 91.90% | 13.90 | 18.20 |
+| **SPARC-hier (hard)** | 1.2601 | 91.25% | **12.90** | **18.00** |
+| BaselineLQR (tightest width) | **1.1712** | 91.82% | 12.71 | 20.03 |
 
-- **Best calibration**: SPARC has the lowest calibrated-Winkler (17.70; second best is AblationWOMu at 18.05, then SPARC-hier at 18.72). It also holds coverage at 90.8%, closest of the top group to nominal 90% besides the conformalized-equalized group.
-- **Not the sharpest mean**: BaselineLQR wins AQL (1.1705) — SPARC's AQL is 1.2094. **This is the core honest statement**: SPARC does not claim AQL superiority over the best linear baseline; it claims calibration superiority.
-- **The paradox sharpened**: LQR's width (12.69) is the *tightest* of all 22 methods, yet its Winkler (20.01) is among the worst for a narrow model — it is too narrow and under-/mis-calibrated in the tails. SPARC's width (13.40) is only ~0.7 wider but its Winkler is 2.3 lower. The "tightest box" is not the "best box."
+- **Best calibration**: at 24 h the **hard (hierarchical) head has the lowest calibrated-Winkler (18.00)**, with the soft flagship at 18.20; both beat LQR 20.03. The soft-vs-hard difference (0.20) is within seed noise and reversed from the 1 h run — report them as comparable.
+- **Not the sharpest mean**: BaselineLQR wins AQL (1.1712) — SPARC's AQL is 1.2540, and the gap is **significant (p=0.015)**. **This is the core honest statement**: SPARC does not claim AQL superiority over the best linear baseline; it claims calibration superiority.
+- **The paradox sharpened**: LQR's width (12.71) is the *tightest*, yet its Winkler (20.03) is the worst of the top group — too narrow and miscalibrated in the tails. SPARC-soft (13.90) is ~1.2 wider but its Winkler is ~1.8 lower. The "tightest box" is not the "best box."
 
 ### Why flat split-conformal is part of the model
 Coverage is *cheap* — split-conformal takes every model to near-90% coverage (that is the point of B4). Therefore the differentiator after recalibration is **width at fixed coverage / calibrated-Winkler**, which SPARC wins. The contribution is not "SPARC has 90% coverage" — it is "**at the coverage every model reaches after conformal, SPARC's interval is tightest per unit of reliability.**"
@@ -101,7 +103,7 @@ Following a first-principles red-team pass, the load-bearing assumptions, their 
 |---|---|---|
 | Coverage-equalized comparison is the fair frame | Convention | B4 conformal-all; recalibration equalizes coverage |
 | 5-seed protocol has power for the claimed deltas | Convention/partly unknown | §5; MV & λ both falsified only under this gate |
-| Monotone (hier) head is tighter than soft penalty | **Falsified** | SPARC-soft 17.70 Winkler < SPARC-hier 18.72; also in MV/§9 |
+| Monotone (hier) head is tighter than soft penalty | **Supported at 24 h (n.s.)** | SPARC-hier 18.00 < SPARC-soft 18.20; reversed from the 1 h run, difference within seed noise |
 | Coverage composes under pointwise selection | **Falsified** | γ → 64.7% coverage |
 | Normalized residual is exchangeable (nested conformal) | **Falsified** | β → width 34.14, KS unchanged |
 | λ is off-optimal in a useful direction | Falsified (no direction gives AQL gain) | λ 5-seed |
@@ -131,7 +133,7 @@ The two falsified "would-be improvements" (monotone head tightness; coverage com
 
 ## 10. Conclusion — the claims this document supports
 
-1. **SPARC + flat conformal is the best-calibrated model** on this protocol (lowest calibrated-Winkler 17.70 at 90.8% coverage, 5-seed).
+1. **SPARC + flat conformal is the best-calibrated model** on this protocol (lowest calibrated-Winkler **18.00 hard / 18.20 soft** at 91.9% coverage, 5-seed; LQR 20.03).
 2. **AQL and calibrated-Winkler pick different winners**, and this is statistically backed — the reported "winner" is a function of the metric.
 3. **No architecture or tuning in ten first-principles directions beats SPARC + flat conformal** at 5-seed significance, closing the reviewer-visible alternatives.
 4. **The 5-seed + paired-significance protocol is load-bearing**; single-seed edges (MV, λ) were demonstrably noise.

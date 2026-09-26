@@ -1,7 +1,7 @@
 # 11. Decision-relevance EDAs + seasonal-transfer framing (E1/E3/E4/E5)
 
 - **Date**: 2026-09-04
-- **Status**: Accepted
+- **Status**: Superseded by ADR-0014
 - **Source**: results.json (in-sample), monthly_janmay_5.json, monthly_aprjun_5.json, monthly_junaug_5.json
 
 ## Decision

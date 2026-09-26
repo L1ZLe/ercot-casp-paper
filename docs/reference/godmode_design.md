@@ -4,6 +4,8 @@
 **Date:** 2026-09-13
 **Audit basis:** Assembled strictly from the building blocks that survived the red-team audit. It recombines elements already verified to work; it does not import new external methods.
 
+> **Updated 2026-09-26.** Every godmode direction was rerun at the canonical **24 h** constraint lead (ADR-0013) with the 5-seed protocol (ADR-0004). The verdict is unchanged — **no direction beats SPARC** (`probes_passed: []`). §9's table is the original seed-42 / 1 h record; the 24 h / 5-seed numbers are in §9b and `docs/explanation/08-sparc-24h-findings.md` §5b.
+
 ---
 
 ## 1. Why this exists
@@ -143,6 +145,24 @@ Single-seed probes A/B/C/full ran clean (`godmode/run_godmode_probes.py`, ~15 mi
 | MarketRuleEmbedded | 1.230 | 93.44 | 13.989 | 19.122 | — |
 | MarketRuleEmbeddedHier | 1.328 | 88.84 | 13.623 | 20.838 | — |
 | BaselineMLP | 1.405 | 94.97 | 16.506 | 18.883 | — |
+
+### 9b. 24 h / 5-seed rerun (2026-09-26) — verdict unchanged
+
+| direction | 24 h / 5-seed cal-Winkler | verdict |
+|---|---|---|
+| Probe A (linear spine + rule + conformal) | 20.14 (cov 90.50) | FAIL |
+| Probe B (time-in-query attention) | 18.38 (cov 92.60) | FAIL |
+| Probe C (identity-only) | 18.06 (cov 90.77) | FAIL |
+| Probe full (fusion) | 18.26 (cov 92.08) | FAIL |
+| Move D (Winkler objective) | 18.34 (cov 87.9) | FAIL |
+| Move E (CQR conformal) | 17.38 (cov 85.3) | FAIL |
+| MV (level/spread factorization) | 18.16 (p=0.88) | FAIL |
+| λ 0.05 vs 0.10 | 18.08 (p=0.41) | FAIL |
+| β (nested normalized conformal) | PIT worse | RULE OUT |
+| γ (min-width routing) | cov 73.13% | RULE OUT |
+| SPARC soft / hard reference | 18.20 / 18.00 | — |
+
+`probes_passed: []`. Source: `godmode/results/godmode_{probes,de,mv,lambda}_5seed.json`, `godmode_test_{alpha,beta,gamma}.json`, `godmode_results.json`.
 
 ### Verdict interpretation
 

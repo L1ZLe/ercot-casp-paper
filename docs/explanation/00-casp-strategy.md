@@ -52,7 +52,7 @@ Every item defends the SAME contribution. Nothing here splits into a second pape
 
 ### Already correct in `paper.tex` — DO NOT tear down
 - [x] Calibration is the stated headline (not AQL-vs-LQR).
-- [x] The AQL loss to LQR (1.335 vs 1.315) is disclosed with paired t / Wilcoxon / sign tests, reframed as a calibration gain.
+- [x] The AQL loss to LQR (1.254 vs 1.171, p=0.015) is disclosed with paired t / Wilcoxon / sign tests, reframed as a calibration gain.
 - [x] "Temporal buys point error; constraint-attention/identity buys calibration" ablation story is present.
 - [x] Generalization pairs (HB_NORTH, HB_WEST) and a significance table are present.
 - [x] CPU/lightweight framing + honest limitations section.

@@ -105,7 +105,7 @@ The core idea: **model how the market forms prices, not just the price history.*
 
 "Three pairs: the primary `HB_HUBAVG→HB_PAN` with the full comparison, plus two probes where only our model runs — `HB_NORTH` at **86.6%** and `HB_WEST` at **91.0%**. That's a **calibration-consistency** check, not a ranked comparison."
 
-"Near-range OOD: on the canonical monthly Jan–May window (2-seed) we hold **90.2%** coverage versus **89.7%** for linear, and we win on error too. Season-to-season is the decision-relevant test because electricity is **strongly seasonal** — which corridors bind changes with the season. Year-to-year is secondary: with under nine thousand parameters we **retrain frequently**, so 'train once, generalize a year' is the **wrong question**. For completeness, the harsh full cross-year stress test (2-seed) gives us **72.2%** coverage versus **59.6%** for linear — the calibration edge survives even when the error edge does not (linear wins AQL there, 1.065 vs 1.183)."
+"Near-range OOD: on the canonical monthly Jan–May window we hold **87.7%** coverage versus **88.1%** for linear, with a better width-aware score (Winkler **27.86** vs 30.74). Season-to-season is the decision-relevant test because electricity is **strongly seasonal** — which corridors bind changes with the season. Year-to-year is secondary: with under nine thousand parameters we **retrain frequently**, so 'train once, generalize a year' is the **wrong question**. For completeness, the harsh cross-year and calendar tests give us **90.1% vs 81.4%** (cross-year) and **90.5% vs 82.3%** (calendar) — the calibration edge survives a full-year shift."
 
 "Conformal defense: a reviewer might say 'just wrap the linear model in conformal.' We did. It reaches **91.82%** coverage at width **12.71** — but its calibrated Winkler is still **20.03**, worse than our **18.20** (hard head **18.00**). So conformal equalizes coverage but not width-efficiency; the edge is **intrinsic**."
 
@@ -169,8 +169,8 @@ SPARC **8,978** · iTransformer 13,760 · LSTM 34,952 · TimesNet 40,584 · MLP 
 ### Sensitivity (5-seed) — leads 1, 2, 4, 12, 24 h
 Coverage 88.82 → 89.10 → 87.40 → 86.65 → 89.41; Winkler 18.43 → 19.74 → 20.38 → 21.16 → 20.25. **Calibration degrades as the snapshot ages** (report honestly). Lag sets 24 / 24-48 / 24-48-168: coverage 85.84 / 86.04 / 89.41.
 
-### Godmode (godmode's own conformal split, 1 h lead; SPARC baseline there = 17.52)
-A 22.35 · B 18.36 · C 18.37 · full 18.86 · D 18.19 · E 86.4%/14.59 · MV p=0.030 · β width 34.14 · γ coverage 64.66% · λ 17.772 vs 17.702 — **all fail to beat SPARC**.
+### Godmode (godmode's own conformal split, 24 h / 5-seed; SPARC soft 18.20 / hard 18.00)
+A 20.14 · B 18.38 · C 18.06 · full 18.26 · D 18.34 (cov 87.9) · E cov 85.3 · MV 18.16 (n.s.) · λ 18.08 (n.s.) · β RULE OUT · γ cov 73.1 RULE OUT — **all fail to beat SPARC**.
 
 ---
 
