@@ -1,5 +1,9 @@
 # SPARC — Number Verification Against Canonical `results.json`
 
+> **UPDATE 2026-09-25 (ADR-0013).** The canonical run now uses a **24 h** constraint lead (the previous day's day-ahead clearing). Headline numbers changed: SPARC raw coverage **89.41**, Winkler **20.25**, AQL **1.254**, AQCR **0.11**; calibrated Winkler **18.20** (hard head **18.00**); OOD and sensitivity are now 5-seed and the sensitivity table **varies**. This audit was written against the earlier **1 h** run (archived at `code/results/_lead1h_20260925/`); its verdicts about the stale 2-seed docs still hold.
+>
+> **Canonical numbers live in `code/results/results.json` — do not quote the tables below as current.**
+
 - **Date**: 2026-09-18
 - **Canonical source**: `code/results/results.json` (schema 1.3, generated 2026-09-13T22:20:49Z, 5 seeds 42–46, expanded 2026 snapshot)
 - **Secondary sources** (only where `results.json` has no entry): `code/results/cross_year_results.json`, `code/results/calendar_oov_results.json`, `code/results/monthly_results.json`, `code/results/probe_pairs_5seed.json`, `godmode/results/*.json`

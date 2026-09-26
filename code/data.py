@@ -343,15 +343,12 @@ def build_dataset(config, test_only=False, sequential=True):
                 lag_val = 0.0
             lags_list.append(lag_val)
 
-        # Constraint slot features for this hour — LAGGED to prevent look-ahead
-        # leakage. Using the SAME hour's shadow prices to predict the SAME hour's
-        # spread would peek at the answer (DAM shadow prices are only known after
-        # the auction clears). Use the most recent PREVIOUS constraint snapshot
-        # strictly before the target hour.
-        #
-        # B5 delayed-input sensitivity (ADR-0012-pending): config.constraint_lead_hours
-        # (>1) emulates a stale/late constraint file — at hour t we only have the
-        # constraint snapshot from t - lead_hours (or the nearest earlier one).
+        # Constraint slot features for this hour — LAGGED for day-ahead
+        # availability (ADR-0013). ERCOT's DAM clears all 24 delivery hours of
+        # day D in a single auction on D-1, so hour t-1 is contemporaneous with
+        # the target and leaks. The freshest snapshot available at bid time is
+        # the previous day's clearing: lead=24 -> hour t uses hour t-24.
+        # config.constraint_lead_hours varies this for the B5 sensitivity sweep.
         lead = max(int(getattr(config, "constraint_lead_hours", 1)), 1)
         prev_ts = None
         if i >= lead and lead < len(timestamps):

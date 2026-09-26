@@ -8,8 +8,8 @@ subgraph G_D3["D3 - The model"]
     Q["Query = the path asking<br/>which constraints matter for me"] --> ATTN_D3
     ATTN_D3["Constraint attention<br/>a_k = exp(score_k) / Σ_j exp(score_j)<br/>Σ_k a_k = 1<br/>a_k = learned relative exposure weight<br/>(plays the role of ΔSF: positive + normalized,<br/>so it captures relative magnitude; sign and scale<br/>are absorbed downstream)"] --> HEAD
     ATTN_D3 --> BLEND["Weighted blend of the value signals<br/>≈ Σ_k a_k · μ_k<br/>same form as Σ_k ΔSF_k · μ_k"]
-    HEAD["Quantile head<br/>soft flat head + crossing penalty<br/>raw AQCR 2.98% vs LQR 32.5%, MLP 13.6%<br/>(hard head is 0.00% by construction)"] --> LOSS["Training loss<br/>L = Σ_t Σ_τ ρ_τ(y_t - q_hat_τ,t) + λ · crossing penalty<br/>ρ_τ(u) = u · (τ - I[u &lt; 0])<br/>penalty is training-only, never a metric"]
-    HEAD --> HARD2["Hard (hierarchical) head tested on SPARC<br/>calibrated Winkler 18.72 vs soft 17.70 → kept soft"]
+    HEAD["Quantile head<br/>soft flat head + crossing penalty<br/>raw AQCR 0.11% vs LQR 32.0%, MLP 15.1%<br/>(soft head; hard head 0.00% by construction)"] --> LOSS["Training loss<br/>L = Σ_t Σ_τ ρ_τ(y_t - q_hat_τ,t) + λ · crossing penalty<br/>ρ_τ(u) = u · (τ - I[u &lt; 0])<br/>penalty is training-only, never a metric"]
+    HEAD --> HARD2["Hard (hierarchical) head tested on SPARC<br/>calibrated Winkler 18.00 (hard) vs 18.20 (soft) → comparable; kept soft as flagship"]
     LAG["Lagged-spread encoder"] --> HEAD
 
     ATTN_D3 --> WHY_ROOT["Why attention, not something else?"]

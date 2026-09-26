@@ -22,7 +22,7 @@ We predict the **day-ahead electricity price spread** between two locations in t
 
 The core idea: **model how the market forms prices, not just the price history.** In a nodal market the price decomposes into a common energy term plus a congestion term `Σ_k ΔSF_k · μ_k`, where `μ_k` is the **shadow price** of a binding transmission constraint and `ΔSF_k` is the path's exposure to it. The energy term cancels in a spread, so the spread is pure congestion. Our model **SPARC** conditions on the clearing's published constraint signals — which constraints bind and their shadow prices — and **learns** the exposure weights as attention. It does **not** embed a settlement formula (the Austrian anchor paper can, because such a formula exists there).
 
-**Findings:** SPARC is the **best-calibrated** model (lowest calibrated Winkler, **17.70**, at 90.81% coverage), matches the best linear baseline on average error (AQL parity: 1.209 vs 1.171, p=0.077), beats every deep baseline, is **8,978 parameters**, and its calibration edge is **causal** (removing attention drops coverage 12.5 points). AQL and calibrated-Winkler disagree on the winner — the **metric-paradox** — the paper's intellectual core.
+**Findings:** SPARC is the **best-calibrated** model (lowest calibrated Winkler, **18.00–18.20**, at ~91% coverage), beats every deep baseline on average error, is **8,978 parameters**, and its calibration edge is **causal** (removing attention drops coverage **11.9 points**). LQR wins average error (AQL **1.171 vs 1.254**, now **significant**, p=0.015) — AQL and calibrated-Winkler disagree on the winner, the **metric-paradox**. All numbers use the realistic **24 h** constraint lead (ADR-0013).
 
 ---
 
@@ -82,7 +82,7 @@ The core idea: **model how the market forms prices, not just the price history.*
 
 "Why attention and not something else? Raw concatenation fails because the length changes hourly. Averaging all constraints destroys selectivity — a line near the sink should matter more. An MLP has no weight per constraint and can't tell you what mattered. A sequence model is wrong because a **set has no order**. Attention handles a variable-size set, gives a per-path weight, and is order-free."
 
-"Head: the anchor uses a hard head, guaranteed ordered. We use a **soft** head plus a crossing penalty. The penalty is **training-only, never a metric** — otherwise our number wouldn't be comparable to the baselines. We tested the hard head on SPARC: calibrated Winkler **18.72** vs soft **17.70**, so we kept the soft head."
+"Head: the anchor uses a hard head, guaranteed ordered. We use a **soft** head plus a crossing penalty. The penalty is **training-only, never a metric** — otherwise our number wouldn't be comparable to the baselines. We tested the hard head on SPARC: at 24 h the calibrated Winkler is **18.00** (hard) vs **18.20** (soft) — comparable; we kept the soft head as flagship and report the hard head as the coherence-guaranteed alternative."
 
 ### [S8] Metrics, with examples — [SHOW D4]
 
@@ -105,31 +105,31 @@ The core idea: **model how the market forms prices, not just the price history.*
 
 ### [S10] Findings — [SHOW D5]
 
-"Raw results, primary pair: our coverage is **88.82%** versus **71.09%** for linear and **82.98%** for the MLP. After conformal recalibration — which equalizes coverage across models — our **calibrated Winkler is 17.70**, the lowest, versus **20.01** for linear and **19.86** for the MLP. So the calibration win is not bought with a wider box. We match the linear model on average error — **1.209 vs 1.171**, not significant (p=0.077) — while beating every deep baseline. Coverage is significant versus linear: **t=7.79, p=0.0015**. And we are **8,978 parameters** versus 64,456 for the MLP and 78,536 for the Transformer."
+"Raw results, primary pair: our coverage is **89.41%** versus **73.13%** for linear and **87.37%** for the MLP. After conformal recalibration — which equalizes coverage across models — our **calibrated Winkler is 18.20** (hard head **18.00**), the lowest, versus **20.03** for linear and **20.61** for the MLP. So the calibration win is not bought with a wider box. LQR wins average error — **1.254 vs 1.171**, now **significant** (p=0.015) — but we beat every deep baseline. Coverage is significant versus linear (**t=8.33, p=0.0011**); versus the MLP it is not (p=0.125). And we are **8,978 parameters** versus 64,456 for the MLP and 78,536 for the Transformer. Everything at the realistic 24 h constraint lead."
 
 "Honest negatives: the linear model edges us on raw AQL; CRPS is parity (1.910 vs 2.007); one ablation — removing the path embedding, AQL 1.180 — edges us on AQL; and extreme tail events are out of scope."
 
 ### [S11] Mechanism — [SHOW D5]
 
-"Remove the **attention** and raw coverage drops from **88.82% to 76.35%** — a **12.5-point** drop — while average error barely moves (1.209 → 1.217). So attention is **specifically** the calibration mechanism, not just extra capacity. Remove constraint **identity** and you lose **7.31 points**; remove shadow-price **magnitude** and only **0.51** — so **which** corridors bind matters far more than **how large** the shadow price is. Removing the temporal features hurts point error (AQL 1.640); removing the lagged spreads changes almost nothing (89.45% coverage)."
+"Remove the **attention** and raw coverage drops from **89.41% to 77.48%** — an **11.9-point** drop — while average error barely moves (1.254 → 1.225). So attention is **specifically** the calibration mechanism, not just extra capacity. Remove constraint **identity** and you lose **4.71 points**; remove shadow-price **magnitude** and only **1.09** — so **which** corridors bind matters far more than **how large** the shadow price is. Removing the temporal features hurts point error (AQL 1.682); removing the lagged spreads changes little (88.64% coverage)."
 
 "And the attention concentrates **0.19–0.26 (mean 0.23)** on the top-3 μ slots — about **12×** the uniform baseline of 0.020 — peaking at 0.257 at the highest-μ bin (max μ 84.8). The model looks where the physics says it should."
 
 ### [S12] Generalization — [SHOW D6]
 
-"Three pairs: the primary `HB_HUBAVG→HB_PAN` with the full comparison, plus two probes where only our model runs — `HB_NORTH` at **86.57%** and `HB_WEST` at **90.98%**. That's a **calibration-consistency** check, not a ranked comparison. (AQL on those probes looks lower — 0.62 and 0.90 — but AQL is scale-dependent and those pairs have smaller spreads; baselines were not run there, so no error win.)"
+"Three pairs: the primary `HB_HUBAVG→HB_PAN` with the full comparison, plus two probes where only our model runs — `HB_NORTH` at **93.87%** and `HB_WEST` at **93.85%**. That's a **calibration-consistency** check, not a ranked comparison. (AQL on those probes looks lower — 0.51 and 0.81 — but AQL is scale-dependent and those pairs have smaller spreads; baselines were not run there, so no error win.)"
 
-"Near-range OOD: on the canonical monthly Jan–May window (2-seed) we hold **90.2%** coverage versus **89.7%** for linear, and we win on error too (AQL 2.094 vs 2.295). Season-to-season is the decision-relevant test because electricity is **strongly seasonal** — which corridors bind changes with the season. Year-to-year is secondary: with under nine thousand parameters we **retrain frequently**, so 'train once, generalize a year' is the **wrong question**. For completeness, the harsh full cross-year stress test (2-seed) gives us **72.2%** coverage versus **59.6%** for linear — the calibration edge survives even when the error edge does not (linear wins AQL there, 1.065 vs 1.183)."
+"Near-range OOD (5-seed): on the canonical monthly Jan–May window we hold **87.69%** coverage versus **88.06%** for linear — but our interval is better-formed: **Winkler 27.86 vs 30.74**. Season-to-season is the decision-relevant test because electricity is **strongly seasonal** — which corridors bind changes with the season. Year-to-year is secondary: with under nine thousand parameters we **retrain frequently**, so 'train once, generalize a year' is the **wrong question**. For completeness, the harsh cross-year and calendar tests give us **90.13% vs 81.36%** (cross-year) and **90.49% vs 82.28%** (calendar) over linear."
 
-"Conformal defense: a reviewer might say 'just wrap the linear model in conformal.' We did. It reaches **91.7%** coverage at width **12.69** — but its calibrated Winkler is still **20.01**, worse than our **17.70**. So conformal equalizes coverage but not width-efficiency; the edge is **intrinsic**."
+"Conformal defense: a reviewer might say 'just wrap the linear model in conformal.' We did. It reaches **91.82%** coverage at width **12.71** — but its calibrated Winkler is still **20.03**, worse than our **18.20** (hard head **18.00**). So conformal equalizes coverage but not width-efficiency; the edge is **intrinsic**."
 
-"Sensitivity (2-seed): coverage stays at **89.5%** across all lag sets (24 / 24-48 / 24-48-168) and constraint leads (1, 2, 4, 12 h), so the result is not an artifact of one choice."
+"Sensitivity (5-seed): this is where the realistic lead shows its cost. As the constraint snapshot ages, calibration degrades — Winkler rises from **18.43** (1 h) to **20.25** (24 h), peaking at **21.16** (12 h) — while coverage stays in the high 80s. The lag-set sweep behaves the same way: more lag history helps (coverage 85.84 → 89.41 as we go from 24 h to 24/48/168). This is exactly the robustness result we report: the calibration advantage is real but partly depends on snapshot freshness."
 
 ### [S13] The God model — [SHOW D7]
 
 "I noticed that **every** model wins exactly one axis — linear wins average error, persistence wins MAE, the physics rule is a free prior, the monotone head rescues coherence, conformal guarantees coverage. So I tried to fuse the winners into one model: a linear spine plus an attention residual plus a physics bias, with a monotone head and conformal on top — scored on calibrated Winkler."
 
-"The result was **negative**. Ten directions, none beats SPARC at five-seed significance. **1** linear spine + market prior + conformal: best AQL (1.159) but Winkler 22.35. **2** time inside the attention query: 18.36 vs SPARC 17.52. **3** identity-only: 18.37. **4** full additive fusion: 18.86. **5** train on the reported metric: coverage 87.1%, AQL 1.264, Winkler 18.19. **6** feature-adaptive conformal: width 14.59, coverage 86.4%, Winkler 20.29. **7** level/spread factorization: seed-42 looked better but 5-seed AQL 1.2786 vs 1.2094, p=0.030. **8** nested normalized conformal: width 34.14, Winkler 38.70. **9** pointwise min-width routing: coverage collapsed to 64.66%. **10** crossing-penalty tuning: 5-seed 17.772 vs 17.702. And the other paper's rule variants — market-rule-embedded 18.83, hierarchical 19.54 — both worse than 17.70."
+"The result was **negative**. Ten directions, none beats SPARC at five-seed significance. **1** linear spine + market prior + conformal: best AQL (1.159) but Winkler 22.35. **2** time inside the attention query: 18.36 vs SPARC 17.52. **3** identity-only: 18.37. **4** full additive fusion: 18.86. **5** train on the reported metric: coverage 87.1%, AQL 1.264, Winkler 18.19. **6** feature-adaptive conformal: width 14.59, coverage 86.4%, Winkler 20.29. **7** level/spread factorization: seed-42 looked better but 5-seed AQL 1.2786 vs 1.2094, p=0.030. **8** nested normalized conformal: width 34.14, Winkler 38.70. **9** pointwise min-width routing: coverage collapsed to 64.66%. **10** crossing-penalty tuning: 5-seed 17.772 vs 17.702. And the other paper's rule variants — market-rule-embedded 18.83, hierarchical 19.54 — both worse than SPARC (godmode baseline 17.52 under its own conformal split)."
 
 "That negative result is actually the **strongest evidence** in the paper: every rival explanation is tested and ruled out. When a reviewer asks 'did you try X?', the answer is on the chart."
 
@@ -145,69 +145,79 @@ The core idea: **model how the market forms prices, not just the price history.*
 
 ## 4. Canonical number sheet
 
+> **Constraint lead = 24 h (ADR-0013).** Every number below is from `code/results/results.json` regenerated with `constraint_lead_hours = 24` (the previous day's day-ahead clearing — the freshest snapshot actually available at bid time). The superseded 1 h run is archived at `code/results/_lead1h_20260925/`.
+
 ### Raw (5-seed, primary pair)
 | Method | AQL ↓ | Coverage % ↑ | Winkler ↓ | AQCR % ↓ | width90 | CRPS ↓ | MAE ↓ |
 |---|---|---|---|---|---|---|---|
-| **SPARC** | **1.209** | **88.82** | **18.43** | **2.98** | 13.71 | 2.007 | **2.811** |
-| LQR | **1.171** | 71.09 | 24.64 | 32.54 | 6.26 | **1.910** | 2.898 |
-| MLP | 1.420 | 82.98 | 23.07 | 13.61 | 14.91 | 2.361 | 3.218 |
-| LSTM | 1.470 | 78.61 | 25.11 | 0.88 | 10.79 | 2.414 | — |
-| Transformer | 1.441 | 79.80 | 24.98 | 5.24 | 9.49 | 2.345 | — |
-| PatchTST | 1.471 | 78.38 | 25.60 | 1.46 | 12.13 | 2.408 | — |
-| iTransformer | 1.366 | 70.13 | 31.74 | 80.79 | 5.88 | 2.220 | — |
-| TimesNet | 1.432 | 76.04 | 26.11 | 0.02 | 7.73 | 2.329 | — |
-| TimeXer | 1.482 | 72.38 | 26.95 | 7.42 | 8.90 | 2.405 | — |
-| XGBoost | 1.604 | 79.23 | 23.40 | 37.00 | 15.85 | 2.644 | — |
-| RF | 2.194 | 34.97 | 43.90 | 0.00 | 10.40 | 3.611 | — |
+| **SPARC** | **1.254** | **89.41** | **20.25** | **0.11** | 13.87 | 2.074 | **2.921** |
+| SPARC-hier (hard head) | 1.260 | 91.23 | 19.40 | 0.00 | 14.02 | 2.087 | 2.880 |
+| LQR | **1.171** | 73.13 | 24.43 | 31.99 | 6.42 | **1.910** | 2.907 |
+| MLP | 1.404 | 87.37 | 23.34 | 15.08 | 16.16 | 2.335 | 3.114 |
+| LSTM | 1.460 | 74.20 | 27.15 | 11.30 | 9.22 | 2.388 | — |
+| Transformer | 1.440 | 76.67 | 25.74 | 0.02 | 7.88 | 2.337 | — |
+| PatchTST | 1.487 | 75.93 | 25.83 | 0.74 | 9.11 | 2.415 | — |
+| iTransformer | 1.358 | 71.26 | 31.40 | 78.76 | 6.01 | 2.205 | — |
+| TimesNet | 1.435 | 75.53 | 26.17 | 0.07 | 7.67 | 2.334 | — |
+| TimeXer | 1.450 | 76.27 | 25.96 | 0.00 | 7.79 | 2.352 | — |
+| XGBoost | 1.524 | 79.34 | 23.67 | 62.19 | 15.47 | 2.510 | — |
+| RF | 2.044 | 32.19 | 41.90 | 0.00 | 9.08 | 3.360 | — |
 
 ### Calibrated (5-seed, flat split-conformal)
 | Method | cal-coverage % | cal-width | **cal-Winkler ↓** |
 |---|---|---|---|
-| **SPARC** | 90.81 | 13.40 | **17.70** |
-| SPARC-hier (hard head) | 90.81 | 13.04 | 18.72 |
-| LQR | 91.68 | **12.69** | 20.01 |
-| MLP | 94.14 | 17.05 | 19.86 |
-| MarketRuleEmbedded | 91.47 | 12.96 | 18.83 |
-| MarketRuleEmbeddedHier | 91.64 | 13.83 | 19.54 |
+| **SPARC-hier (hard head)** | 91.25 | **12.90** | **18.00** |
+| **SPARC (soft, flagship)** | 91.90 | 13.90 | 18.20 |
+| LQR | 91.82 | 12.71 | 20.03 |
+| MLP | 94.27 | 17.78 | 20.61 |
+| MarketRuleEmbedded | 91.38 | 12.75 | 18.17 |
+| MarketRuleEmbeddedHier | 91.73 | 13.22 | 18.11 |
 
-### Significance
-- Coverage vs LQR: **t=7.79, p=0.0015** · vs MLP: t=3.83, p=0.019
-- AQL vs LQR: p=0.077 (**parity, n.s.**) · vs MLP: p=0.003
-- MAE vs MLP: p=0.0036
+> At the realistic 24 h lead the **hard (hierarchical) head edges the soft head** on calibrated Winkler (18.00 vs 18.20) — they were reversed at 1 h. Report both; the soft head is retained as flagship for simplicity, and the hard head is the coherence-guaranteed alternative.
+
+### Significance (5-seed paired tests)
+- Coverage vs LQR: **t=8.33, p=0.0011** (SPARC better, significant)
+- Coverage vs MLP: t=1.93, **p=0.125 (n.s.)** — at 24 h the coverage margin over MLP is no longer significant
+- AQL vs LQR: **t=4.05, p=0.015** — LQR **significantly better** (not parity)
+- AQL vs MLP: t=−4.71, p=0.0092 (SPARC better, significant)
+- Width-90 vs MLP: t=−3.81, p=0.019 (SPARC's raw band is narrower than MLP's)
 
 ### Ablation (raw coverage; calibrated Winkler)
-Full **88.82 / 17.70** · no attention **76.35 / 18.81** · no identity 81.51 / 18.14 · no μ 88.32 / 18.05 · no temporal 84.92 / 23.90 (AQL 1.640) · no path embed 83.04 / 18.86 (AQL 1.180) · no lagged spreads 89.45 / 18.10
+Full **89.41 / 18.20** · no attention **77.48 / 22.23** (**−11.93 pp**) · no identity 84.70 / 20.12 (−4.71 pp) · no μ 88.32 / 19.76 (−1.09 pp) · no temporal 88.67 / 27.18 (AQL 1.682) · no path embed 82.30 / 21.54 (AQL 1.191) · no lagged spreads 88.64 / 20.55
 
 ### Efficiency
 SPARC **8,978** · iTransformer 13,760 · LSTM 34,952 · TimesNet 40,584 · MLP 64,456 · Transformer 78,536 · TimeXer 78,664 · PatchTST 89,544
 
 ### Attention
-0.19–0.26 (mean 0.23) on top-3 μ slots; ≈12× uniform 0.020; peak 0.257 at max μ 84.8
+0.23–0.26 (mean ≈0.25) on the top-3 μ slots; ≈12× the uniform 0.020; peaks 0.260 at the highest-μ bin (max μ 84.8)
 
-### OOD
-Probes NORTH **86.57%** / WEST **90.98%** (5-seed) · monthly Jan–May **90.2 vs 89.7** (2-seed) · calendar **77.80 vs 85.54** (2-seed) · cross-year **72.21 vs 59.63** (2-seed) · sensitivity **89.50%** (2-seed)
+### OOD (5-seed)
+Probes NORTH **93.87%** / WEST **93.85%** · monthly Jan–May **87.69 vs 88.06** (LQR; SPARC Winkler 27.86 vs LQR 30.74) · calendar **90.49 vs 82.28** · cross-year **90.13 vs 81.36**
 
-### Godmode (godmode conformal; SPARC baseline 17.52)
-10 directions: A 22.35 · B 18.36 · C 18.37 · full 18.86 · D 18.19 · E 86.4%/14.59 · MV p=0.030 · β width 34.14 · γ coverage 64.66% · λ 17.772 vs 17.702
+### Sensitivity (5-seed) — constraint leads 1, 2, 4, 12, 24 h
+Coverage 88.82 → 89.10 → 87.40 → 86.65 → 89.41; Winkler 18.43 → 19.74 → 20.38 → 21.16 → **20.25**. Lag sets 24 / 24-48 / 24-48-168: coverage 85.84 / 86.04 / 89.41; Winkler 22.27 / 21.92 / 20.25. **Calibration degrades as the snapshot ages (Winkler rises)** — report this honestly as the cost of realistic constraint availability.
+
+### Godmode (godmode's own conformal, run at 1 h lead; SPARC baseline 17.52 there)
+10 directions: A 22.35 · B 18.36 · C 18.37 · full 18.86 · D 18.19 · E 86.4%/14.59 · MV p=0.030 · β width 34.14 · γ coverage 64.66% · λ 17.772 vs 17.702 — all fail to beat SPARC.
 
 ---
 
 ## 5. Q&A ammunition
 
 - **Why not a bigger model?** The signal is low-rank in the constraint dimension; extra capacity goes into temporal noise. We beat all deep baselines on error and calibration.
-- **Why does LQR win AQL?** AQL is middle-dominated. We claim calibration, not AQL superiority — the gap is not significant (p=0.077).
+- **Why does LQR win AQL?** AQL is middle-dominated. We claim calibration, not AQL superiority — at the realistic 24 h lead LQR's error edge is even significant (p=0.015).
 - **Is it overfit?** 5 seeds, chronological split, no leakage, paired tests; seed-42 wins that didn't replicate were discarded.
 - **What about spikes?** Out of scope — central 90% band for routine daily sizing.
 - **What's novel if it's just attention?** Conditioning on clearing constraint outputs in a nodal market where no settlement formula exists; plus calibration-first evaluation and the measured metric-paradox.
 - **Which rule did you embed?** None. The decomposition identity is used as structure; the model learns the weights.
 - **Why 3 pairs?** 1 primary (full comparison) + 2 probes (proposed model only).
-- **Why does conformal not save the baseline?** It equalizes coverage but not width: LQR cal-Winkler 20.01 vs SPARC 17.70.
+- **Why does conformal not save the baseline?** It equalizes coverage but not width: LQR cal-Winkler 20.03 vs SPARC 18.20 (hard head 18.00).
 
 ---
 
 ## 6. Open items for the paper
 
-1. **Framing**: canonical headline is calibrated-Winkler **17.70** at 90.81% coverage; decide whether to lead with calibrated or present raw + calibrated.
+1. **Framing**: canonical headline is calibrated-Winkler **18.00 (hard head) / 18.20 (soft)** at ~91% coverage under the 24 h lead; decide whether to lead with calibrated or present raw + calibrated.
 2. **Seasonal windows**: the three-window story (87.8 / 92.7 / 62.5) is **not** in the canonical build — re-run into `results.json` or drop it.
 3. **Stale docs**: `docs/research_brief.md`, `docs/reference/results-record.md`, `docs/explanation/03-paper-framing.md`, ADR-0011 carry the 2-seed numbers and need superseding.
 4. **AQCR wording**: "lowest of all learned models" is false canonically (hard head 0.00% by construction; LSTM 0.88%, TimesNet 0.02%).

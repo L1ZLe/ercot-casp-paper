@@ -7,7 +7,7 @@ subgraph G_D4["D4 - Metrics"]
     AQL["AQL / pinball loss<br/>ρ_τ(y - q_τ) = (y - q_τ) · (τ - I[y &lt; q_τ])<br/>At τ = 0.5: error 2 → loss 1.0<br/>At τ = 0.9: error 2 → loss 1.8"]
     COV["Empirical interval coverage<br/>Coverage = (1/N) · Σ_t I[L_t ≤ y_t ≤ U_t]<br/>For a 90% interval: L_t = q_0.1 and U_t = q_0.9<br/>88 of 100 hours inside = 88%"]
     WINK["Winkler score for a 90% interval<br/>W = U - L, if L ≤ y ≤ U<br/>W = U - L + 20(L - y), if y &lt; L<br/>W = U - L + 20(y - U), if y &gt; U"]
-    AQCR["Adjacent quantile crossing rate<br/>AQCR = crossings / adjacent quantile pairs<br/>A crossing occurs when q_τ,j &gt; q_τ,j+1<br/>SPARC 2.98% vs LQR 32.54%"]
+    AQCR["Adjacent quantile crossing rate<br/>AQCR = crossings / adjacent quantile pairs<br/>A crossing occurs when q_τ,j &gt; q_τ,j+1<br/>SPARC 0.11% vs LQR 31.99%"]
     AQL --> PARADOX["THE METRIC-PARADOX<br/>AQL is middle-dominated → LQR wins it<br/>Winkler taxes the band edges → SPARC wins it<br/>the reported winner depends on the metric"]
     COV --> TRADE["Why it matters for trading<br/>a band claiming 90% but holding 71%<br/>leaves 29% of hours under-hedged<br/>low mean error does NOT rescue bad intervals"]
     PARADOX --> TRADE

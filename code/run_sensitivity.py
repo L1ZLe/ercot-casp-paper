@@ -2,7 +2,7 @@
 
 Emulates the MRINN-style scaling/availability analysis for a day-ahead market:
   1. Input-length sensitivity: ablate the lag set   (e.g. {24}, {24,48}, {24,48,168})
-  2. Delayed-constraint sensitivity: increase the constraint-snapshot lead     (e.g. 1,2,4,12 h)
+  2. Delayed-constraint sensitivity: increase the constraint-snapshot lead     (e.g. 1,2,4,12,24 h)
 
 For each setting it rebuilds the dataset for a small set of fast deterministic
 forecasters (ProposedMethod + LQR) on the primary pair and records coverage /
@@ -12,7 +12,7 @@ the "sensitivity" key.
 
 Usage:
   .venv/bin/python code/run_sensitivity.py \
-      --constraint-leads 1 2 4 12 \
+      --constraint-leads 1 2 4 12 24 \
       --lag-sets "24" "24,48" "24,48,168"
 """
 
@@ -100,7 +100,9 @@ def _cell(config, mname, seeds, out_cell):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--constraint-leads", nargs="+", type=int, default=[1, 2, 4, 12])
+    ap.add_argument(
+        "--constraint-leads", nargs="+", type=int, default=[1, 2, 4, 12, 24]
+    )
     ap.add_argument("--lag-sets", nargs="+", default=["24", "24,48", "24,48,168"])
     ap.add_argument("--seeds", nargs="+", type=int, default=[42, 43, 44, 45, 46])
     ap.add_argument("--methods", nargs="+", default=["ProposedMethod", "BaselineLQR"])
@@ -125,7 +127,7 @@ def main():
     for lag_str in args.lag_sets:
         lags = [int(x) for x in lag_str.split(",")]
         config.lag_hours = lags
-        config.constraint_lead_hours = 1
+        config.constraint_lead_hours = 24  # ADR-0013 default (previous-day clearing)
         config.run_tag = "sens_lag_" + "_".join(str(x) for x in lags)
         cell = {}
         for mname in args.methods:

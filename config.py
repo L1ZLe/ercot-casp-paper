@@ -111,9 +111,10 @@ class Config:
         self.head_mode = "soft"
 
         # Constraint-snapshot lead hours (B5 delayed-input sensitivity).
-        # Default 1 = the existing strict-prior hour. Larger values emulate a
-        # stale/late constraint file to measure calibration degradation.
-        self.constraint_lead_hours = 1
+        # 24 = the previous day's day-ahead clearing, the freshest snapshot
+        # actually available at bid time (ERCOT DAM clears all 24 h of day D on
+        # D-1, so t-1 is contemporaneous with the target and leaks). ADR-0013.
+        self.constraint_lead_hours = 24
 
         # LA-CASF penalty weight — training-only objective, never a metric, locked by ADR-0004
         self.lambda_casf = 0.1

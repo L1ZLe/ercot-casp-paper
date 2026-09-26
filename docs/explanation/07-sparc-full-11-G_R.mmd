@@ -1,17 +1,17 @@
 flowchart TD
 subgraph G_R["R - Evidence index (numbers + sources)"]
-    R1["R-COV - 88.82 vs 71.09 raw; 90.81 vs 91.68 calibrated"] --> SRC1["code/results/results.json (metrics + conformal)"]
-    R2["R-WINK - 18.43 vs 24.64 raw; 17.70 vs 20.01 calibrated"] --> SRC1
-    R3["R-AQL - 1.209 vs 1.171, p=0.077 n.s."] --> SRC1
-    R4["R-AQCR - 2.98 vs 32.54"] --> SRC1
-    R5["R-SIG - coverage t=7.79, p=0.0015"] --> SRC1
-    R6["R-ABL - 88.82 to 76.35; no-ID -7.31pp vs no-μ -0.51pp"] --> SRC1
-    R7["R-ATTN - 0.19-0.26 (mean 0.23) vs uniform 0.020; 0.257 extreme"] --> SRC1
+    R1["R-COV - 89.41 vs 73.13 raw; 91.90 vs 91.82 calibrated"] --> SRC1["code/results/results.json (metrics + conformal)"]
+    R2["R-WINK - 20.25 vs 24.43 raw; 18.20 soft / 18.00 hard vs 20.03 calibrated"] --> SRC1
+    R3["R-AQL - 1.254 vs 1.171, p=0.015 (LQR significantly better)"] --> SRC1
+    R4["R-AQCR - 0.11 vs 31.99"] --> SRC1
+    R5["R-SIG - coverage t=8.33, p=0.0011"] --> SRC1
+    R6["R-ABL - 89.41 to 77.48; no-ID -4.71pp vs no-μ -1.09pp"] --> SRC1
+    R7["R-ATTN - 0.23-0.26 (mean 0.25) vs uniform 0.020; 0.260 extreme"] --> SRC1
     R8["R-PARAM - 8,978 vs MLP 64,456 / Transformer 78,536"] --> SRC1
-    R9["R-3PAIR - NORTH 86.57 / WEST 90.98"] --> SRC1
-    R10["R-MONTH - Jan-May 2026: 90.2 vs 89.7 (2-seed)"] --> SRC1
-    R11["R-XYEAR - full 2025->2026: 72.2 vs 59.6 (2-seed)"] --> SRC1
-    R12["R-CONF - LQR 91.7 cov / 12.69 width / 20.01 Winkler vs SPARC 90.81 / 13.40 / 17.70"] --> SRC1
-    R13["R-SENS - coverage 89.5 across lags/leads (2-seed)"] --> SRC1
-    R14["R-GOD - 10 directions, SPARC 17.52 baseline"] --> SRC2["godmode/results/*.json"]
+    R9["R-3PAIR - NORTH 93.87 / WEST 93.85"] --> SRC1
+    R10["R-MONTH - Jan-May 2026: 87.7 vs 88.1 (5-seed; SPARC Winkler 27.86 vs 30.74)"] --> SRC1
+    R11["R-XYEAR - full 2025->2026: 90.1 vs 81.4; calendar 90.5 vs 82.3 (5-seed)"] --> SRC1
+    R12["R-CONF - LQR 91.82 / 12.71 / 20.03 vs SPARC 91.90 / 13.90 / 18.20 (soft)"] --> SRC1
+    R13["R-SENS - leads 1/2/4/12/24: Winkler 18.43/19.74/20.38/21.16/20.25 (5-seed, varies)"] --> SRC1
+    R14["R-GOD - 10 directions, SPARC 17.52 baseline (1 h lead)"] --> SRC2["godmode/results/*.json"]
   end

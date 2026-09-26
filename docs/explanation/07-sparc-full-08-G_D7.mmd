@@ -1,7 +1,7 @@
 flowchart TD
 subgraph G_D7["D7 - The God model (10 experiments)"]
     IDEA["The idea<br/>every model wins exactly one axis<br/>linear wins average error, persistence wins MAE<br/>physics rule is a free prior; monotone head rescues coherence<br/>conformal guarantees coverage<br/>so fuse the winners into one model"] --> ARCH["The fusion design<br/>linear spine + attention residual + physics bias<br/>+ monotone head + conformal<br/>scored on calibrated Winkler, not AQL"]
-    ARCH --> VERDICT["Verdict: NEGATIVE<br/>10 tested directions, none beats SPARC<br/>(godmode conformal; SPARC baseline 17.52)"]
+    ARCH --> VERDICT["Verdict: NEGATIVE<br/>10 tested directions, none beats SPARC<br/>(godmode conformal, 1 h lead; SPARC baseline 17.52)"]
     VERDICT --> E1["1 linear spine + market prior + conformal<br/>AQL 1.159 (best), Winkler 22.35 FAIL<br/>sharp but loses the calibration"]
     VERDICT --> E2["2 time inside the attention query<br/>Winkler 18.36 vs SPARC 17.52 FAIL<br/>fixing the architecture did not improve calibration"]
     VERDICT --> E3["3 identity-only, drop μ magnitude<br/>Winkler 18.37, passes its own line but above SPARC<br/>simpler is nearly as good, no gain"]
@@ -12,5 +12,5 @@ subgraph G_D7["D7 - The God model (10 experiments)"]
     VERDICT --> E8["8 nested normalized conformal<br/>width 34.14, Winkler 38.70 RULE OUT<br/>over-scaled the band; residuals already non-uniform"]
     VERDICT --> E9["9 pointwise min-width routing<br/>coverage collapsed to 64.66% RULE OUT<br/>the narrower band is the uncalibrated one"]
     VERDICT --> E10["10 tune the crossing penalty<br/>seed-42 better, 5-seed 17.772 vs 17.702 FAIL<br/>no AQL effect"]
-    VERDICT --> OTHERS7["Other paper's rule and head (canonical conformal)<br/>market-rule-embedded 18.83, hier version 19.54<br/>both worse than SPARC 17.70<br/>hard head on SPARC 18.72 vs soft 17.70"]
+    VERDICT --> OTHERS7["Other paper's rule and head (canonical conformal)<br/>market-rule-embedded 18.17, hier 18.11 (24 h)<br/>SPARC family within 0.2: soft 18.20, hard 18.00 (n.s.)<br/>hard head on SPARC 18.00 vs soft 18.20 - comparable"]
   end

@@ -11,7 +11,7 @@ subgraph G_D2["D2 - SCED, the anchor, our move"]
     RULE --> HARD["Hard hierarchical head<br/>non-crossing by construction, AQCR = 0"]
     RULE --> GAPS["Never reports coverage, Winkler, CRPS, PIT"]
 
-    MUST --> MOVE["Our move: condition on the PAST published clearing outputs<br/>most recent snapshot strictly before the target hour<br/>the target hour's own μ is NOT used —<br/>it exists only after that hour clears, so using it would leak"]
+    MUST --> MOVE["Our move: condition on the PAST published clearing outputs<br/>previous day's clearing (t-24 h, ADR-0013) - the freshest snapshot available at bid time<br/>the target hour's own μ is NOT used —<br/>it exists only after that hour clears, so using it would leak"]
     MOVE --> LEARN["What is given: the lagged μ (a published output)<br/>What is learned: ΔSF, as attention weights"]
     MOVE --> NOT["SPARC is constraint-aware<br/>NOT market-rule-informed"]
   end
