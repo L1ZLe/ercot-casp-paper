@@ -77,9 +77,9 @@ The deepest conceptual difference is therefore **formula-embedding vs. output-co
 
 1. **Constraint-slot tensor** `C_t ∈ ℝ^{K×4}`, K = 50: top-K binding constraints by shadow-price magnitude, each slot carrying shadow price `μ_k`, constraint-identity index, voltage level, and clipped flow ratio `min(constraintValue/limit, 5)`.
 2. **Pair encoding:** settlement-pair embedding projected into a query vector `q_t` (pair dimension 8).
-3. **Constraint attention:** slot encoder → key/value vectors; scaled dot-product attention `a_k = q_t^T h_k / √d`; softmax weights `α_k` interpreted as **learned incremental shift-factor differences**; latent congestion magnitude `m_k = ψ_μ(μ_k)`.
+3. **Constraint attention:** slot encoder → key/value vectors; scaled dot-product attention `a_k = q_t^T h_k / √d`; softmax weights `α_k` interpreted as **learned incremental shift-factor differences**; latent congestion value `m_k = ψ_μ(h_k)` — a linear map of the whole encoded slot, not of the raw shadow price alone.
 4. **Spread construction:** `ŝ_t^con = Σ_k α_k m_k` — the attention-weighted congestion view, interpretable per hour by construction.
-5. **Temporal block:** 18-d temporal vector (Fourier within-day/weekly features + lags at 24/48/168 h) through a lightweight feedforward encoder.
+5. **Temporal block:** 18-d temporal vector (6 Fourier terms + lags at 24/48/168 h, zero-padded) through a lightweight feedforward encoder; it joins the attention output in the head and does not enter the attention query.
 6. **Quantile head:** a **plain two-layer head** outputs the 7 quantiles; ordering is encouraged by a **soft non-crossing penalty** (LA-CASF, λ = 0.1) that is a *training objective only* (ADR-0004: never a reported metric). Measured coherence: AQCR = 0.11% (the hard head achieves 0.00% by construction).
 
 *Fidelity note:* the shipped flagship in [code/models.py](../../code/models.py) is a plain head + soft penalty (`ProposedMethod`); the `ProposedMethodHier` variant implements the hierarchical non-crossing head (AQCR 0.00). This doc describes the implemented mechanism, matching ADR-0004.
@@ -93,10 +93,10 @@ The deepest conceptual difference is therefore **formula-embedding vs. output-co
 | 90% interval coverage | **89.4%** | 73.1% | nominal target 90%; the headline decision-relevant win |
 | Winkler-90 (width-aware) | **20.25** | 24.43 | coverage not bought with excessive width |
 | AQL (pure pinball) | 1.254 | **1.171** | the linear baseline is significantly better (paired t, p=0.015) |
-| MAE / RMSE | **3.20 / 4.45** | 3.27 / 4.48 | best point accuracy of all compared methods |
+| MAE / RMSE | 2.92 / 4.11 | **2.91 / 4.11** | parity with LQR on point error; Naive-24h has the lowest MAE (2.76) |
 | AQCR | **0.11%** | 31.99% | coherence; penalized softly, measured (hard head 0.00% by construction) |
 | Params | **8,978** | – | ~4× smaller than LSTM, ~7× smaller than MLP |
-| Spike MAE | 10.00 | 10.05 | **not a SPARC advantage** (trees/MLP beat SPARC here) |
+| Spike MAE | 9.67 | 9.82 | **not a SPARC advantage** (not significant vs LQR, p=0.56; MLP 8.25 beats SPARC) |
 
 - Ablations (division of labor): temporal stream dominates point error; constraint-attention and constraint-identity chiefly buy **calibration** (W/O attention drops coverage 89.4 → 77.5). Mechanism evidence: attention concentrates on top-3 shadow-price slots at ~0.23–0.26 (~12× uniform), rising at extreme congestion (see [research_brief.md](../research_brief.md)).
 

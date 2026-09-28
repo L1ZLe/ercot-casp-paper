@@ -1,5 +1,7 @@
 # SPARC Paper — Strategy & State
 
+> **Note 2026-09-27 (ADR-0016):** historical document — numbers are kept as they were recorded. Where this file describes the model, training or ablations, `code/models.py`, `code/data.py`, `code/main.py` and `code/results/results.json` take precedence; the current, code-accurate description is in [09-paper-handoff.md](09-paper-handoff.md) §2d and §5c.
+
 _Owner: Sami · Repo: `/home/l1zle/L1zle` · Created: 2026-09-03 · Mode: Act (approved)_
 
 **Verdict restated:** This is a **NeurIPS-oriented calibration / uncertainty-quantification (UQ) method paper, energy-framed.** The backtest is **split out** as a separate skill/portfolio workstream, not part of this paper. One paper.

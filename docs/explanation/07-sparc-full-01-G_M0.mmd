@@ -7,7 +7,7 @@ subgraph G_M0["M0 - Master spine (full)"]
     S4["S4 - SCED: no transcribable formula<br/>λ, SF, μ are optimization outputs"] --> S5
     S5["S5 - Anchor (Austria): rule-embedding<br/>they embed a settlement formula"] --> S6
     S6["S6 - Our move: output-conditioning<br/>constraint-aware, NOT rule-informed"] --> S7
-    S7["S7 - The model<br/>constraints → attention → quantiles<br/>soft head; why attention; why mean-pool"] --> S8
+    S7["S7 - The model<br/>constraints → attention → quantiles<br/>soft head; why attention; why 50 fixed slots"] --> S8
     S8["S8 - Metrics and why<br/>coverage, Winkler, AQL, AQCR, CRPS, PIT<br/>the metric-paradox"] --> S9
     S9["S9 - Protocol<br/>5 seeds, chronological split,<br/>what an ablation is"] --> S10
     S10["S10 - Findings<br/>best calibration (LQR now wins AQL),<br/>beats deep nets, coherence, efficiency"] --> S11

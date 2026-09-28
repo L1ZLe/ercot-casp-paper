@@ -1,6 +1,6 @@
 # SPARC — Paper Handoff (start here)
 
-_2026-09-26 · For the paper writer. Every number here is canonical: 5 seeds (42–46), CPU, chronological 70/15/15, **24 h previous-day constraint lead** (ADR-0013). Source of truth: `code/results/results.json` (committed). Change log: `08-sparc-24h-findings.md`._
+_2026-09-26 · For the paper writer. Every number here is canonical: 5 seeds (42–46), CPU, chronological 70/15/15, **24 h previous-day constraint lead** (ADR-0013). Source of truth: `code/results/results.json` (committed). Change log: `08-sparc-24h-findings.md`. **Updated 2026-09-27:** model, training and ablation descriptions corrected to match the shipped code (ADR-0016); the code and `results.json` win over any prose._
 
 > **Read this first, then `07-sparc-briefing-full.md` (the full script + flowcharts), then `03-paper-framing.md` (claims/scope).** Do **not** quote numbers from `docs/research_brief.md`'s older sections, `results-record.md` history, or any `1 h` figure — they are superseded.
 
@@ -23,15 +23,15 @@ _The locked 5-seed, 24 h numbers to quote. Anything else is superseded._
 |---|---|---|---|---|---|---|---|
 | **SPARC** | 1.254 | **89.41** | **20.25** | **0.11** | 13.87 | 2.074 | **2.921** |
 | SPARC-hier (hard head) | 1.260 | 91.23 | 19.40 | 0.00 | 14.02 | 2.087 | 2.880 |
-| BaselineLQR | **1.171** | 73.13 | 24.43 | 31.99 | 6.42 | **1.910** | 2.907 |
+| BaselineLQR | **1.171** | 73.13 | 24.43 | 31.99 | 6.41 | **1.910** | 2.907 |
 | BaselineMLP | 1.404 | 87.37 | 23.34 | 15.08 | 16.16 | 2.335 | 3.114 |
 | BaselineLSTM | 1.460 | 74.20 | 27.15 | 11.30 | 9.22 | 2.388 | — |
 | BaselineTransformer | 1.440 | 76.67 | 25.74 | 0.02 | 7.88 | 2.337 | — |
-| BaselinePatchTST | 1.487 | 75.93 | 25.83 | 0.74 | 9.11 | 2.415 | — |
+| BaselinePatchTST | 1.486 | 75.93 | 25.83 | 0.74 | 9.11 | 2.415 | — |
 | BaselineITransformer | 1.358 | 71.26 | 31.40 | 78.76 | 6.01 | 2.205 | — |
 | BaselineTimesNet | 1.435 | 75.53 | 26.17 | 0.07 | 7.67 | 2.334 | — |
 | BaselineTimeXer | 1.450 | 76.27 | 25.96 | 0.00 | 7.79 | 2.352 | — |
-| BaselineXGBoost | 1.524 | 79.34 | 23.67 | 62.19 | 15.47 | 2.510 | — |
+| BaselineXGBoost | 1.523 | 79.34 | 23.67 | 62.19 | 15.47 | 2.509 | — |
 | BaselineRF | 2.044 | 32.19 | 41.90 | 0.00 | 9.08 | 3.360 | — |
 
 ### 2b. Calibrated (flat split-conformal)
@@ -42,7 +42,7 @@ _The locked 5-seed, 24 h numbers to quote. Anything else is superseded._
 | MarketRuleEmbedded | 91.38 | 12.75 | 18.17 |
 | MarketRuleEmbeddedHier | 91.73 | 13.22 | 18.11 |
 | BaselineLQR | 91.82 | 12.71 | 20.03 |
-| BaselineMLP | 94.27 | 17.78 | 20.61 |
+| BaselineMLP | 94.27 | 17.77 | 20.61 |
 
 > Soft vs hard head: **18.20 vs 18.00 — within seed noise, no paired test, sign-flipped from the 1 h run.** Report as comparable; keep soft as flagship (the paper's existing narrative), hard as the coherence-by-construction alternative (AQCR 0.00).
 
@@ -51,24 +51,27 @@ _The locked 5-seed, 24 h numbers to quote. Anything else is superseded._
 - AQL vs LQR: p=0.015 — **LQR significantly better** (honest loss) · vs MLP: p=0.0092 (SPARC better)
 - Width-90 vs MLP: p=0.019 (SPARC narrower)
 
-### 2d. Ablations (raw coverage; calibrated Winkler; AQL)
-| variant | coverage % | cal-Winkler | AQL |
-|---|---|---|---|
-| Full SPARC | 89.41 | 18.20 | 1.254 |
-| **no attention** | **77.48** | 22.23 | 1.225 |
-| no identity | 84.70 | 20.12 | 1.211 |
-| no μ magnitude | 88.32 | 19.76 | 1.220 |
-| no temporal | 88.67 | 27.18 | 1.682 |
-| no path embedding | 82.30 | 21.54 | **1.191** |
-| no lagged spreads | 88.64 | 20.55 | 1.225 |
+### 2d. Ablations (raw coverage; raw Winkler; calibrated Winkler; AQL)
+_What each ablation does is taken from `code/models.py` (ADR-0016)._
 
-**Mechanism:** attention is load-bearing (−11.9 pp coverage); **identity ≫ magnitude** (−4.71 vs −1.09 pp); temporal drives point error; path-embedding ablation still edges us on AQL (honest).
+| variant (code class) | what the code changes | coverage % | raw Winkler | cal-Winkler | AQL |
+|---|---|---|---|---|---|
+| Full SPARC | — | 89.41 | 20.25 | 18.20 | 1.254 |
+| **uniform attention** (`AblationWOAttention`) | attention weights fixed to 1/K | **77.48** | 22.23 | 18.75 | 1.225 |
+| no constraint ID (`AblationWOID`) | drops the constraint-ID feature from each slot | 84.70 | 20.12 | 18.01 | 1.211 |
+| constant readout (`AblationWOMu`) | per-slot value μ̃ₖ fixed to 1 → attended output ≡ 1, no constraint information reaches the head | 88.32 | 19.76 | 18.05 | 1.220 |
+| no temporal (`AblationWOTemporal`) | drops the temporal vector (Fourier terms **and** the three lags) | 88.67 | 27.17 | 25.40 | 1.682 |
+| no pair embedding (`AblationWOPathEmbed`) | pair embedding zeroed → constant attention query | 82.30 | 21.54 | 18.90 | **1.191** |
+| explicit energy term (`AblationWOEnergyCancel`) | **adds** a learned energy (λ) predictor to the spread | 88.64 | 20.55 | 18.33 | 1.225 |
+
+**Mechanism (as implemented):** uniform attention is the largest single hit (−11.9 pp coverage; interval width collapses 13.87 → 7.75). Dropping the constraint-ID feature costs −4.71 pp; a constant query costs −7.11 pp but gives the best AQL (honest). Removing the temporal vector keeps coverage only by widening intervals (width 18.98) and is worst on AQL/Winkler. An explicit energy term adds nothing (consistent with energy cancelling in the spread).
+**Caution — WOMu:** it removes the whole constraint readout, not just the μ magnitude, yet costs only −1.09 pp and *improves* raw Winkler. The earlier reading "identity ≫ magnitude" is therefore **not supported as stated**; do not use it until WOMu is re-interpreted (open item, ADR-0016).
 
 ### 2e. Efficiency
 SPARC **8,978** · iTransformer 13,760 · LSTM 34,952 · TimesNet 40,584 · MLP 64,456 · Transformer 78,536 · TimeXer 78,664 · PatchTST 89,544.
 
 ### 2f. Attention concentration
-0.23–0.26 (mean ≈ 0.25) on the top-3 μ slots, ≈ **12×** the uniform 0.020, peak **0.260** at max μ 84.8.
+0.23–0.26 (mean ≈ 0.25) on the top-3 μ slots, ≈ **12×** the uniform 0.020. Per congestion bin: 0.250 · 0.252 · 0.231 · 0.244 · **0.260**; the top bin has a mean max μ of **59.3** (`code/results/attention_analysis.json`). Not monotonic across bins — describe as "high at every level, highest in the most congested bin".
 
 ---
 
@@ -86,7 +89,7 @@ _Does the calibration edge survive a regime shift, and what does snapshot stalen
 **The calibration edge generalizes** — it survives a full-year distribution shift with an ~8–9 pp coverage lead over the linear baseline. Monthly is parity on coverage but SPARC wins width-aware. (The three-window seasonal table is **not** in the canonical build — do not quote it.)
 
 ### Sensitivity — calibration depends on snapshot freshness
-Winkler as the constraint snapshot ages: **18.43 (1 h) → 19.74 (2 h) → 20.38 (4 h) → 21.16 (12 h) → 20.25 (24 h)**. The 24 h lead beats 4 h/12 h because same-hour-previous-day preserves the daily congestion cycle. Report this cost honestly.
+Winkler as the constraint snapshot ages: **18.43 (1 h) → 19.74 (2 h) → 20.38 (4 h) → 21.16 (12 h) → 20.25 (24 h)**. The 24 h lead beats 4 h/12 h because same-hour-previous-day preserves the daily congestion cycle. Leads of 1–12 h fall inside the same day-ahead auction as the target hour and are **not available at bid time** (ADR-0013) — report them only as a diagnostic of the cost of honest availability, never as a better alternative.
 
 ---
 
@@ -132,7 +135,7 @@ _No duplication: each topic lives in the doc below (all current as of 2026-09-26
 |---|---|
 | **Market setup** — `LMP_i = λ + Σ_k SF_{k,i}·μ_k`; spread = `Σ_k ΔSF_k·μ_k` (congestion differential); shadow price; SCED; why no closed-form exists in a nodal market (→ output-conditioning) | `docs/explanation/07-sparc-briefing-full.md`, `docs/research_brief.md` |
 | **Anchor / positioning** — Yu et al. MRINN (Austria); formula-embedding vs output-conditioning | `docs/explanation/04-casp-vs-mrinn.md` |
-| **Model design** — inputs (top-50 constraint slots, mean-pooled identity, μ pathway, Fourier, lags 24/48/168, path embedding), attention query/key/value, soft head + LA-CASF | `docs/explanation/07-sparc-briefing-full.md`, `docs/explanation/04-casp-vs-mrinn.md` |
+| **Model design** — inputs (top-50 constraint slots with 4 features each, pair embedding, 18-d temporal vector = 6 Fourier terms + lags 24/48/168), pair-embedding query over slot keys/values, soft head + LA-CASF; exact spec in §5c items 9–11 and ADR-0016 | `docs/explanation/07-sparc-briefing-full.md`, `docs/explanation/04-casp-vs-mrinn.md` |
 | **Protocol** — chronological 70/15/15, CPU, 7-quantile grid, constraint-availability rule | `docs/adr/0004-experiment-protocol-cpu-chronological-split-pure-pinball-aql.md`, `docs/adr/0013-day-ahead-constraint-availability-t24h.md`, `docs/explanation/07-sparc-briefing-full.md` |
 | **Metric definitions** — AQL, coverage, Winkler-90, CRPS, AQCR, PIT/KS, efficiency | `docs/explanation/03-paper-framing.md`, `docs/explanation/07-sparc-briefing-full.md` |
 | **Data & reproducibility** — ERCOT DAM files, 3 pairs, 2025/2026, SHA256 checksums, venv | `AGENTS.md`, `docs/adr/0003-data-provenance-and-checksum-verification.md` |
@@ -152,24 +155,25 @@ _Subtle points the current draft gets wrong, or that a writer could easily miss.
 
 ### Hardware & protocol
 4. **CPU-only, no GPU** — AMD Ryzen 7 5735HS, 12 GB RAM; "no GPU was used for any reported result". All baselines on the same hardware. The efficiency thesis rests on this.
-5. Adam, lr 1e-3, β=(0.9, 0.999), batch 64, cosine annealing, **max 20 epochs**, seeds {42–46}; report **mean ± std**.
-6. **Early-stopping contradiction**: "early stopping after 20 epochs without improvement, max 20 epochs" — patience equals the cap, so early stopping never triggers. Fix the wording.
+5. Adam, lr 1e-3 (fixed — **no LR scheduler** in `code/main.py`), β=(0.9, 0.999), batch 64, **20 epochs**, seeds {42–46}; report **mean ± std**.
+6. **No early stopping**: the code trains all 20 epochs and keeps the checkpoint with the lowest validation loss (`code/main.py` l. 253–263). The draft's "early stopping after 20 epochs without improvement" wording must go.
 7. **LA-CASF (λ=0.1) is training-only** — never a reported metric (ADR-0004).
 8. Grid: 7 quantiles {0.10, 0.25, 0.45, 0.50, 0.55, 0.75, 0.90}; the penalty spans the **6 adjacent pairs**.
-9. `K=50` constraint slots, zero-padded; `K_t=0` → a learned "no-congestion" embedding.
-10. Slot features = `[μ, kV-class one-hot, clipped flow ratio]` (3-d → 8-d projection); identity embedding 8-d **mean-pooled**.
-11. Temporal = Fourier sin/cos of hour & day-of-week, plus month and an **ERCOT holiday indicator** (18-d).
+9. `K=50` constraint slots (top-K by shadow price), zero-padded with `[0, 0, 0, 0]`; there is **no** learned "no-congestion" embedding — an hour with no binding constraint is simply all-zero slots (`code/data.py` l. 363–365).
+10. Slot features = `[μ, constraint-ID index, kV level (max kV / kV_max, one scalar), flow ratio clipped to [0, 5]]` (4-d → shared Linear 4→8 + ReLU; `code/data.py` l. 290–323, `code/models.py` l. 64–65). The constraint ID enters as this **single scalar feature**; there is **no identity embedding and no mean-pooling** in the forward pass. (`BaseModel` defines a 4-d `constraint_id_embed` that is never used; its 4,004 parameters are still counted in every reported param count.)
+11. Temporal vector (18-d) = 6 Fourier terms [sin/cos(2π·h/24), sin/cos(2π·h/168) with h = hour of day, sin/cos(2π·dow/7)] + the 3 lagged spreads s_{t−24}, s_{t−48}, s_{t−168}, zero-padded to 18 (`code/data.py` l. 367–381). **No month, no holiday indicator, no separate lag pathway.** Note: the 168-h term uses hour-of-day, not hour-of-week (likely unintended; code unchanged).
+11b. Attention: the query is the projected **pair embedding only** (constant for the primary pair); keys/values are the encoded slots; each slot value is mapped to a scalar μ̃ₖ and the output is Σ αₖ·μ̃ₖ. Temporal features do **not** enter the attention — they join afterwards in the head: [pair embedding, temporal vector, attended value] → MLP(128) → 7 quantiles.
 
 ### Metrics
 12. **Primary = coverage + Winkler**; CRPS/AQL/MAE/RMSE are secondary.
-13. **MAPE is excluded** (SPARC's 394.75% shows the pathology near zero denominators).
-14. **Spike coverage 55.9%** — a diagnostic only; tail behaviour is **out of scope**.
+13. **MAPE is excluded** (SPARC's 507.6% shows the pathology near zero denominators).
+14. **Spike coverage 56.5%** — a diagnostic only; tail behaviour is **out of scope**.
 15. **Naive baselines have zero-width intervals** (coverage ~0%) — degenerate; Winkler punishes them.
-16. **CRPS vs LQR is not significant** (p≈0.46); coverage (t=6.50, p=0.003) and Winkler (t=4.32, p=0.012) are. Multiple-comparison correction (Bonferroni) is mentioned.
+16. **Paired tests in `results.json`** exist only vs LQR, MLP and the naive baselines, for coverage, AQL, MAE, width, AQCR and spike-MAE (§2c). There are **no** paired tests for Winkler or CRPS (both are pooled across seeds), so the draft's CRPS (p≈0.46) and Winkler (t=4.32) values are stale and must not be quoted. With 6 comparisons the Bonferroni threshold is 0.0083.
 
 ### Efficiency & data
 17. The efficiency ratio **depends on the comparison**: ≈3.9× fewer params than LSTM (34,952), ≈7× vs MLP (64,456), ≈8.7× vs Transformer (78,536).
-18. Target = `LMP_HB_PAN − LMP_HB_HUBAVG`; **HB_HUBAVG is a Houston-zone hub average, HB_PAN a single Panhandle node**. Corridor rationale: wind export West Texas → load centres.
+18. Target = `LMP_HB_HUBAVG − LMP_HB_PAN` (code: `src − snk` with `src_settlement = HB_HUBAVG`, `snk_settlement = HB_PAN`, `config.py` l. 70–71; the draft states the opposite sign). Corridor rationale: wind export West Texas → load centres. ⚠️ Verify the hub descriptions before quoting them: in ERCOT naming HB_HUBAVG is normally the average of the four hub prices (Houston, North, South, West) and HB_PAN the Panhandle hub — not "a Houston-zone average" and "a single node" as the draft says.
 19. 3 pairs; the 2 extra probes are **proposed-model-only** (no baselines).
 20. Data source: ERCOT MIS public archive; constraint availability tied to **FERC Order 881**; 2025 data for the cross-year probe.
 
@@ -201,7 +205,7 @@ Regenerate everything (hours): `bash godmode/run_all_5seed.sh` (godmode only) or
 
 _The mistakes that would get the paper rejected._
 
-- ❌ Quote any `1 h` or `2-seed` number.
+- ❌ Quote any `1 h` or `2-seed` number (only exception: the lead-sensitivity diagnostic in §3, labelled as such).
 - ❌ Cite `AIstats research paper (outdated)/` (removed from the reference set).
 - ❌ Fold the LA-CASF training penalty into a reported metric (`lambda_casf` is training-only).
 - ❌ Present the soft-head AQCR as "the lowest" (hard head 0.00; Transformer 0.02; TimesNet 0.07).

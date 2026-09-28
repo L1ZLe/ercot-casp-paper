@@ -33,8 +33,8 @@ _2026-09-26 · Canonical source: `code/results/results.json` (5-seed, **24 h pre
 - 8,978 params vs 34,952 (LSTM) / 64,456 (MLP) / 78,536 (Transformer). CPU-minutes. Mirrors anchor (Yu et al.) thesis.
 
 ### F4. Mechanism is causal (ablation + attention analysis)
-- Attention concentration on top-3 μ slots **0.23-0.26 (~12x uniform 0.020)**, peak **0.260** at max μ=84.8.
-- Ablation: removing attention drops coverage **89.41 -> 77.48** (−11.93 pp); AQL barely moves (1.254 -> 1.225). Identity ≫ magnitude (−4.71 pp vs −1.09 pp).
+- Attention concentration on top-3 μ slots **0.23-0.26 (~12x uniform 0.020)**, peak **0.260** in the top bin (mean max μ 59.3).
+- Ablation: removing attention drops coverage **89.41 -> 77.48** (−11.93 pp); AQL barely moves (1.254 -> 1.225). Dropping the constraint-ID feature costs −4.71 pp. `AblationWOMu` (−1.09 pp) fixes the whole attended readout to 1, so it does **not** measure "shadow-price magnitude"; the earlier "identity ≫ magnitude" reading is withdrawn (ADR-0016).
 - Qualify: high + spikes at extreme congestion, NOT smooth monotonic.
 
 ### F5. Calibration generalizes across frames

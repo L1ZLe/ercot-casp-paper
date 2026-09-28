@@ -34,6 +34,8 @@ Every model in the study wins on exactly one axis: LQR wins AQL (stability), Nai
 | **V8** | **Audited finding: metric decides the winner** | AQL vs Winkler | AQL→LQR wins; calibration→SPARC wins | GODMODE is scored on calibration-efficiency, not AQL |
 | **V9** | Physics bias (market rule) | MRE (`MarketRuleEmbedded`) | The hard-coded LMP-spread identity as a *bias* term, not a whole model | Free correct inductive bias |
 
+> **Correction 2026-09-27 (ADR-0016):** V7 is withdrawn as stated. In `code/models.py`, `AblationWOMu` fixes the attended readout to 1, so no constraint information reaches the head — it does not isolate "shadow-price magnitude". Canonical 24 h values: WOID −4.71 pp, WOMu −1.09 pp (the −7.5 pp above is from an older run). Designs below that lean on V7 remain valid as tested experiments, but V7 is no longer an established finding.
+
 **Principles (from the decomposition step), each mapped to its math/code:**
 - **P1 linear-stability** → LQR linear projection of features.
 - **P2 autocorrelation** → explicit `s_{t-24}, s_{t-48}, s_{t-168}` lags as base features.

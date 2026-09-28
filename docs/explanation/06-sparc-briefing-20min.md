@@ -30,7 +30,7 @@ The core idea: **model how the market forms prices, not just the price history.*
 | Term | Meaning |
 |---|---|
 | **LMP** | Locational marginal price at a node. |
-| **Spread** | `LMP_d − LMP_s` for a source→sink path; the tradable object. |
+| **Spread** | `src_price − snk_price` for a source→sink pair (code: `HB_HUBAVG − HB_PAN` for the primary pair); the tradable object. |
 | **λ** | Energy component of LMP; identical at every node; cancels in a spread. |
 | **μ (shadow price)** | Marginal cost of relaxing a binding constraint by 1 MW; the market's congestion signal. |
 | **SF / ΔSF** | Shift factor / its difference between sink and source = the path's exposure to a constraint. |
@@ -40,7 +40,7 @@ The core idea: **model how the market forms prices, not just the price history.*
 | **Coverage** | Fraction of outcomes inside the 0.10–0.90 band; a 90% **prediction interval**, not a confidence interval. |
 | **Winkler-90** | `width + 20 × miss_distance`; rewards covering **and** narrow; can't be gamed with a wide box. |
 | **CRPS** | Proper scoring rule over the whole distribution. |
-| **AQCR** | Adjacent-quantile crossing rate; crossed quantiles are unusable for risk math. |
+| **AQCR** | Share of hours in which at least one adjacent quantile pair is out of order; crossed quantiles are unusable for risk math. |
 | **PIT / KS** | Calibration diagnostic; uniform PIT = perfectly calibrated. No method passes. |
 | **Conformal** | Post-hoc recalibration: widen/narrow the band on a held-out split to hit target coverage. |
 | **Ablation** | Remove one component, retrain, measure the drop → isolates its contribution. |
@@ -61,7 +61,7 @@ The core idea: **model how the market forms prices, not just the price history.*
 
 "Now the shadow price — written μ. When a transmission line hits its limit, you can't push more power through it; to still serve demand the operator re-dispatches to a more expensive generator. The shadow price is the extra cost of relaxing that line by one megawatt. Two towns connected by a road at capacity: delivering one more megawatt costs an extra twenty dollars, so μ is twenty — and that difference **is** the spread."
 
-"Here's the argument: **this is how the market actually works.** μ is the market's own signal of where and how badly the grid is constrained. So the right assumption in this field is to model that mechanism. And you see it in the results: the price-only models get the **center** right but the **risk** wrong — the linear model's 90% band covers only **71.1%**, and its quantiles cross **32.5%** of the time. Ours covers **88.8%** and crosses **3.0%**."
+"Here's the argument: **this is how the market actually works.** μ is the market's own signal of where and how badly the grid is constrained. So the right assumption in this field is to model that mechanism. And you see it in the results: the price-only models get the **center** right but the **risk** wrong — the linear model's 90% band covers only **73.1%**, and its quantiles cross in **32.0%** of hours. Ours covers **89.4%** and crosses in **0.11%**."
 
 "Quickly, the coefficient. **ΔSF** is the difference in shift factors between sink and source. A shift factor asks: inject one megawatt at a node — what fraction flows on that constraint? So ΔSF is the path's **differential exposure**. If a constraint moves both endpoints equally, ΔSF is zero and it contributes **nothing**."
 
@@ -73,11 +73,11 @@ The core idea: **model how the market forms prices, not just the price history.*
 
 ### [8:15–11:30] The model — [SHOW D3]
 
-"Inputs: the top 50 binding constraints — shadow price, identity, voltage, flow ratio; temporal Fourier features; three lagged spreads; and a path embedding."
+"Inputs: the top 50 binding constraints of the previous day's clearing — each slot carries four numbers: shadow price, constraint ID, voltage level and flow ratio; a temporal vector with six Fourier terms plus the three lagged spreads; and a path embedding."
 
-"For the constraint **identity** we **mean-pool** — the number of binding constraints changes every hour, so we need a fixed-size summary that says *which set* of corridors is congested. Others feed prices as a time series and never see the constraint set — they model the shadow, not the cause."
+"Each slot's four numbers go through one small shared layer, so every constraint becomes an 8-number vector; empty slots are zeros, so the set always has 50 entries. Others feed prices as a time series and never see the constraint set — they model the shadow, not the cause."
 
-"Then **attention** — a soft lookup. The **query** is the path asking *'which constraints matter for me?'*; the **keys** are the constraints; the softmax gives a **weight per constraint**; the **values** carry the **shadow-price signal**. So the output is a weighted blend of shadow-price signals, and the weights **play the role of the learned ΔSF** — the path's relative exposure. That's why it's interpretable by construction. (Caveat: softmax weights are positive and normalized, so they capture relative magnitude; sign and scale are absorbed downstream.)"
+"Then **attention** — a soft lookup. The **query** is the path asking *'which constraints matter for me?'*; the **keys** are the constraints; the softmax gives a **weight per constraint**; each **value** is turned into one number μ̃ₖ, its learned congestion signal. So the output is a weighted blend of shadow-price signals, and the weights **play the role of the learned ΔSF** — the path's relative exposure. That's why it's interpretable by construction. (Caveat: softmax weights are positive and normalized, so they capture relative magnitude; sign and scale are absorbed downstream. The query comes from the path alone; time of day enters afterwards, in the head.)"
 
 "Why attention and not something else? Raw concatenation fails because the length changes hourly. Averaging all constraints destroys selectivity. An MLP has no weight per constraint and can't tell you what mattered. A sequence model is wrong because a **set has no order**. Attention handles a variable-size set, gives a per-path weight, and is order-free."
 
@@ -99,7 +99,7 @@ The core idea: **model how the market forms prices, not just the price history.*
 
 "On the canonical 5-seed run at the 24 h lead: our raw coverage is **89.4%** versus **73.1%** for linear and **87.4%** for the MLP. After conformal recalibration — which equalizes coverage across all models — our **calibrated Winkler is 18.20** (hard head **18.00**), the lowest, versus **20.03** for linear and **20.61** for the MLP. So the calibration win is **not** bought with a wider box. LQR wins average error — **1.254 vs 1.171**, now significant (p=0.015) — but we beat every deep baseline. Best coherence, and **8,978 parameters** versus 64,456 for the MLP and 78,536 for the Transformer."
 
-"Mechanism: remove the **attention**, and raw coverage drops from **89.4% to 77.5%** — an **11.9-point** drop — while average error barely moves (1.254 → 1.225). So attention is **specifically** the calibration mechanism. Remove constraint **identity** and you lose **4.71 points**; remove shadow-price **magnitude** and only **1.09** — so **which** corridors bind matters far more than **how large** the shadow price is."
+"Mechanism: remove the **attention**, and raw coverage drops from **89.4% to 77.5%** — an **11.9-point** drop — while average error barely moves (1.254 → 1.225). So attention is **specifically** the calibration mechanism. Drop the constraint-ID feature and you lose **4.71 points**; zero the path embedding (constant query) and you lose **7.11**. Adding an explicit energy term changes little — consistent with the energy cancelling in the spread."
 
 ### [16:30–20:00] Generalization + God model + limits — [SHOW D6]
 
@@ -111,7 +111,7 @@ The core idea: **model how the market forms prices, not just the price history.*
 
 "I also tried to fuse the strengths of every model — the **God model**. Ten directions, none beats SPARC at five-seed significance. That negative result is the **strongest evidence** — every rival explanation is tested and ruled out."
 
-"Honest limits: no method is PIT-uniform; the seasonal story is only partly in the canonical build; AQL and CRPS are parity, not superiority; one ablation (no path embedding, AQL 1.180) edges us on AQL; and the cross-year error edge doesn't hold. Scope is the central 90% band for routine daily sizing. Thank you."
+"Honest limits: no method is PIT-uniform; the seasonal story is only partly in the canonical build; linear wins AQL significantly and CRPS slightly — we claim calibration, not error superiority; one ablation (zeroed path embedding, AQL 1.191) edges us on AQL; and the cross-year error edge doesn't hold. Scope is the central 90% band for routine daily sizing. Thank you."
 
 ---
 
@@ -128,7 +128,7 @@ The core idea: **model how the market forms prices, not just the price history.*
 | MLP | 1.404 | 87.37 | 23.34 | 15.08 |
 | LSTM | 1.460 | 74.20 | 27.15 | 11.30 |
 | Transformer | 1.440 | 76.67 | 25.74 | 0.02 |
-| XGBoost | 1.524 | 79.34 | 23.67 | 62.19 |
+| XGBoost | 1.523 | 79.34 | 23.67 | 62.19 |
 | RF | 2.044 | 32.19 | 41.90 | 0.00 |
 
 ### Calibrated (5-seed, flat split-conformal)
@@ -137,7 +137,7 @@ The core idea: **model how the market forms prices, not just the price history.*
 | **SPARC-hier (hard head)** | 91.25 | **12.90** | **18.00** |
 | **SPARC (soft, flagship)** | 91.90 | 13.90 | 18.20 |
 | LQR | 91.82 | 12.71 | 20.03 |
-| MLP | 94.27 | 17.78 | 20.61 |
+| MLP | 94.27 | 17.77 | 20.61 |
 
 ### Significance
 - Coverage vs LQR: **t=8.33, p=0.0011**
@@ -145,20 +145,20 @@ The core idea: **model how the market forms prices, not just the price history.*
 - AQL vs LQR: **t=4.05, p=0.015** — LQR **significantly** better (not parity)
 - AQL vs MLP: t=−4.71, p=0.0092 (SPARC better)
 
-### Ablation (raw coverage; calibrated Winkler)
-- Full: 89.41 / 18.20
-- No attention: **77.48 / 22.23** (−11.93 pp coverage)
-- No identity: 84.70 / 20.12 (−4.71 pp)
-- No μ magnitude: 88.32 / 19.76 (−1.09 pp)
-- No temporal: 88.67 / 27.18 (AQL 1.682 — point error)
-- No path embedding: 82.30 / 21.54 (AQL 1.191 — edges us)
-- No lagged spreads: 88.64 / 20.55 (≈ full)
+### Ablation (raw coverage / raw Winkler / calibrated Winkler; variant meaning from `code/models.py`)
+- Full: 89.41 / 20.25 / 18.20
+- Uniform attention (`WOAttention`): **77.48 / 22.23 / 18.75** (−11.93 pp coverage)
+- No constraint-ID feature (`WOID`): 84.70 / 20.12 / 18.01 (−4.71 pp)
+- Constant readout — no constraint info reaches the head (`WOMu`): 88.32 / 19.76 / 18.05 (−1.09 pp; do not read as "magnitude", see ADR-0016)
+- No temporal vector incl. lags (`WOTemporal`): 88.67 / 27.17 / 25.40 (AQL 1.682 — point error)
+- Zeroed path embedding (`WOPathEmbed`): 82.30 / 21.54 / 18.90 (AQL 1.191 — edges us)
+- Explicit energy term added (`WOEnergyCancel`): 88.64 / 20.55 / 18.33 (≈ full)
 
 ### Efficiency (params)
 SPARC **8,978** · iTransformer 13,760 · LSTM 34,952 · TimesNet 40,584 · MLP 64,456 · Transformer 78,536 · PatchTST 89,544.
 
 ### Attention
-0.23–0.26 (mean ≈ 0.25) on top-3 μ slots, ≈ **12×** the uniform baseline **0.020**; peaks at **0.260** at the highest-μ bin (max μ 84.8).
+0.23–0.26 (mean ≈ 0.25) on top-3 μ slots, ≈ **12×** the uniform baseline **0.020**; highest, **0.260**, in the most congested bin (mean max μ 59.3).
 
 ### OOD (5-seed)
 - Probes: NORTH **93.87%**, WEST **93.85%**
@@ -167,7 +167,7 @@ SPARC **8,978** · iTransformer 13,760 · LSTM 34,952 · TimesNet 40,584 · MLP 
 - Cross-year full: SPARC **90.13%** vs LQR 81.36%
 
 ### Sensitivity (5-seed) — leads 1, 2, 4, 12, 24 h
-Coverage 88.82 → 89.10 → 87.40 → 86.65 → 89.41; Winkler 18.43 → 19.74 → 20.38 → 21.16 → 20.25. **Calibration degrades as the snapshot ages** (report honestly). Lag sets 24 / 24-48 / 24-48-168: coverage 85.84 / 86.04 / 89.41.
+Coverage 88.82 → 89.10 → 87.40 → 86.65 → 89.41; Winkler 18.43 → 19.74 → 20.38 → 21.16 → 20.25. **Calibration degrades as the snapshot ages** (report honestly). Leads of 1–12 h are inside the target's own auction and not available at bid time — diagnostic only (ADR-0013). Lag sets 24 / 24-48 / 24-48-168: coverage 85.84 / 86.04 / 89.41.
 
 ### Godmode (godmode's own conformal split, 24 h / 5-seed; SPARC soft 18.20 / hard 18.00)
 A 20.14 · B 18.38 · C 18.06 · full 18.26 · D 18.34 (cov 87.9) · E cov 85.3 · MV 18.16 (n.s.) · λ 18.08 (n.s.) · β RULE OUT · γ cov 73.1 RULE OUT — **all fail to beat SPARC**.

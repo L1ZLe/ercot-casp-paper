@@ -38,7 +38,7 @@ These read as strength or neutrality, not weakness, when phrased this way. They 
   Effect: turns the CQR attack into supporting evidence.
 
 - **AQL loss to LQR — report honestly, frame as the metric-paradox:**
-  > "The linear benchmark is significantly better on average quantile loss (1.171 vs 1.254, p=0.015), yet significantly worse on calibrated interval reliability. AQL is middle-dominated; the decision-relevant improvement appears in coverage and Winkler. Which model 'wins' depends on the metric — a result we pre-specified."
+  > "The linear benchmark is significantly better on average quantile loss (1.171 vs 1.254, p=0.015), yet significantly worse on raw 90% coverage (73.1% vs 89.4%, p=0.001) and worse on calibrated Winkler (20.03 vs 18.20; no paired test on Winkler exists). AQL is middle-dominated; the decision-relevant improvement appears in coverage and Winkler. Which model 'wins' depends on the metric — a result we pre-specified."
 
 - **CRPS comparable/slightly favoring LQR — frame as consistency, not a hole:**
   > "CRPS is comparable between SPARC and the linear baseline (2.074 vs 1.910), consistent with the point-error split; the decision-relevant improvement appears in coverage and Winkler."
@@ -79,7 +79,7 @@ HB_HUBAVG→HB_NORTH **93.87%**, HB_HUBAVG→HB_WEST **93.85%** — calibration 
 
 ### 4d. Interpretability — qualified win
 
-Concentration on top-3 shadow-price slots: **0.23–0.26 (~12× the uniform baseline 0.020)**, rising to **0.260 at the extreme congestion bin** (max μ=84.8). Phrase as "high, ~12× focus on high-μ slots that spikes at extreme congestion" — **not** "smooth monotonic growth" (mid-range dips). Source: `code/results/attention_analysis.json`, `charts/fig_attn_concentration.png`. This is the mechanism LQR structurally lacks (linear has no attention).
+Concentration on top-3 shadow-price slots: **0.23–0.26 (~12× the uniform baseline 0.020)**, rising to **0.260 at the extreme congestion bin** (mean max μ 59.3; per bin 0.250 · 0.252 · 0.231 · 0.244 · 0.260). Phrase as "high, ~12× focus on high-μ slots that spikes at extreme congestion" — **not** "smooth monotonic growth" (mid-range dips). Source: `code/results/attention_analysis.json`, `charts/fig_attn_concentration.png`. This is the mechanism LQR structurally lacks (linear has no attention).
 
 ---
 

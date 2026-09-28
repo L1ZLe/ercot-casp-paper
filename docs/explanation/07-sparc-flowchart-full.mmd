@@ -7,7 +7,7 @@ flowchart TD
     S4["S4 - SCED: no transcribable formula<br/>λ, SF, μ are optimization outputs"] --> S5
     S5["S5 - Anchor (Austria): rule-embedding<br/>they embed a settlement formula"] --> S6
     S6["S6 - Our move: output-conditioning<br/>constraint-aware, NOT rule-informed"] --> S7
-    S7["S7 - The model<br/>constraints → attention → quantiles<br/>soft head; why attention; why mean-pool"] --> S8
+    S7["S7 - The model<br/>constraints → attention → quantiles<br/>soft head; why attention; why 50 fixed slots"] --> S8
     S8["S8 - Metrics and why<br/>coverage, Winkler, AQL, AQCR, CRPS, PIT<br/>the metric-paradox"] --> S9
     S9["S9 - Protocol<br/>5 seeds, chronological split,<br/>what an ablation is"] --> S10
     S10["S10 - Findings<br/>best calibration (LQR now wins AQL),<br/>beats deep nets, coherence, efficiency"] --> S11
@@ -44,7 +44,7 @@ flowchart TD
     P3 --> SP["Shadow price μ_k<br/>μ_k = marginal cost of relaxing<br/>constraint k by 1 MW"]
     SP --> EX_D1["Example: road at capacity<br/>one more MW costs +$20<br/>therefore μ = $20/MWh"]
     SP --> TOPK["Selection: per hour, per constraint<br/>sort by its own μ descending, take top 50<br/>binding only, snapshot lagged 24 h (previous day's clearing)"]
-    P1 --> SPREAD["Path spread<br/>ΔLMP_s→d = LMP_d - LMP_s<br/>= Σ_k (SF_k,d - SF_k,s) · μ_k<br/>= Σ_k ΔSF_k · μ_k"]
+    P1 --> SPREAD["Path spread<br/>ΔLMP_s→d = LMP_d - LMP_s<br/>= Σ_k (SF_k,d - SF_k,s) · μ_k<br/>= Σ_k ΔSF_k · μ_k<br/>(code target = src − snk = HB_HUBAVG − HB_PAN,<br/>i.e. the same quantity with the opposite sign)"]
     SPREAD --> C1["λ cancels exactly<br/>spread = pure congestion differential"]
     SPREAD --> DSF_D1["Differential shift factor<br/>ΔSF_k = SF_k,d - SF_k,s<br/>Example: 0.6 - 0.1 = 0.5<br/>If μ_k = $20/MWh, contribution = $10/MWh"]
     DSF_D1 --> Z["If ΔSF_k = 0, the constraint affects both ends equally<br/>Contribution to the spread = 0"]
@@ -74,17 +74,16 @@ flowchart TD
   end
 
   subgraph G_D3["D3 - The model"]
-    IN["Inputs<br/>top-50 constraint slots (μ, identity, kV, flow)<br/>temporal Fourier, 3 lagged spreads, path embedding"] --> ID
-    IN --> MU
-    ID["Identity pathway<br/>MEAN-POOLED over binding constraints<br/>fixed size because K varies hourly<br/>captures WHICH set of corridors binds"] --> ATTN_D3
-    MU["Shadow-price pathway<br/>per-slot keys and values<br/>the VALUES carry the shadow-price (μ) signal"] --> ATTN_D3
-    TEMP["Temporal encoder"] --> ATTN_D3
-    Q["Query = the path asking<br/>which constraints matter for me"] --> ATTN_D3
+    IN["Inputs<br/>top-50 constraint slots, 4 numbers each<br/>(μ, constraint ID, kV level, flow ratio)<br/>temporal vector: 6 Fourier terms + 3 lagged spreads (18-d)<br/>path embedding"] --> ID
+    ID["Slot encoder<br/>one shared layer per slot (Linear 4→8 + ReLU)<br/>empty slots are zeros → always 50 slots<br/>the constraint ID is one of the 4 input numbers"] --> MU
+    MU["Keys and values<br/>keys = the encoded slots<br/>each value → one number μ̃_k<br/>(learned congestion signal of that constraint)"] --> ATTN_D3
+    TEMP["Temporal encoder<br/>Fourier terms + lagged spreads<br/>joins in the head, NOT in the attention"] --> HEAD
+    Q["Query = the path embedding only<br/>asks which constraints matter for this pair"] --> ATTN_D3
     ATTN_D3["Constraint attention<br/>a_k = exp(score_k) / Σ_j exp(score_j)<br/>Σ_k a_k = 1<br/>a_k = learned relative exposure weight<br/>(plays the role of ΔSF: positive + normalized,<br/>so it captures relative magnitude; sign and scale<br/>are absorbed downstream)"] --> HEAD
-    ATTN_D3 --> BLEND["Weighted blend of the value signals<br/>≈ Σ_k a_k · μ_k<br/>same form as Σ_k ΔSF_k · μ_k"]
-    HEAD["Quantile head<br/>soft flat head + crossing penalty<br/>raw AQCR 0.11% vs LQR 32.0%, MLP 15.1%<br/>(soft head; hard head 0.00% by construction)"] --> LOSS["Training loss<br/>L = Σ_t Σ_τ ρ_τ(y_t - q_hat_τ,t) + λ · crossing penalty<br/>ρ_τ(u) = u · (τ - I[u &lt; 0])<br/>penalty is training-only, never a metric"]
+    ATTN_D3 --> BLEND["Weighted blend of the value signals<br/>= Σ_k a_k · μ̃_k<br/>same form as Σ_k ΔSF_k · μ_k"]
+    HEAD["Quantile head<br/>[path embedding, temporal vector, attention output]<br/>→ MLP (128) → 7 quantiles<br/>soft head + crossing penalty, no sorting<br/>raw AQCR 0.11% vs LQR 32.0%, MLP 15.1%<br/>(hard head 0.00% by construction)"] --> LOSS["Training loss<br/>L = Σ_t Σ_τ ρ_τ(y_t - q_hat_τ,t) + λ · crossing penalty<br/>ρ_τ(u) = u · (τ - I[u &lt; 0])<br/>penalty is training-only, never a metric"]
     HEAD --> HARD2["Hard (hierarchical) head tested on SPARC<br/>calibrated Winkler 18.00 (hard) vs 18.20 (soft) → comparable; kept soft as flagship"]
-    LAG["Lagged-spread encoder"] --> HEAD
+    LAG["Lagged spreads t-24 / t-48 / t-168<br/>part of the temporal vector<br/>no separate encoder"] --> TEMP
 
     ATTN_D3 --> WHY_ROOT["Why attention, not something else?"]
     WHY_ROOT --> A1["Raw concatenation of the constraints<br/>REJECTED<br/>the number of binding constraints changes every hour<br/>the network needs a fixed-size input"]
@@ -92,7 +91,7 @@ flowchart TD
     WHY_ROOT --> A3["MLP over the constraint features<br/>REJECTED<br/>no explicit weight per constraint<br/>cannot tell you which line drove the forecast"]
     WHY_ROOT --> A4["RNN or Transformer over the constraint set<br/>REJECTED<br/>a set has no order; first and last are interchangeable<br/>imposes an order that does not exist"]
     WHY_ROOT --> WIN["ATTENTION — CHOSEN<br/>handles a variable-size set<br/>gives a per-path weight to each constraint<br/>order-free (permutation-invariant)<br/>the weights play the role of learned ΔSF<br/>→ interpretable by construction"]
-    WHYID["Why mean pooling (identity pathway)<br/>K varies each hour → need a fixed-size vector<br/>order-independent and robust<br/>captures WHICH set of corridors binds"]
+    WHYID["Why 50 fixed slots<br/>K varies each hour → pad to 50 with zeros<br/>fixed-size input; attention then picks what matters"]
     OTHERS["What others do, and why it is wrong for this problem<br/>feed the price as a time series, never see the constraint set<br/>= model the shadow, not the cause"]
     WHYID --> OTHERS
   end
@@ -125,8 +124,8 @@ flowchart TD
     RESULTS --> WINS["Findings<br/>1 best calibrated (cal-Winkler 18.20 soft / 18.00 hard)<br/>2 LQR now significantly better on AQL (p=0.015); beats deep nets<br/>3 best coherence vs linear/trees (0.11% vs 32.0%/15.1%/62.2%)<br/>4 7-9x more efficient (8,978 params)<br/>5 coverage significant vs LQR (t=8.33, p=0.0011); vs MLP n.s."]
     RESULTS --> CAL["Calibrated (flat split-conformal)<br/>SPARC cov 91.90, width 13.90, Winkler 18.20 (soft; hard 18.00)<br/>LQR cov 91.82, width 12.71, Winkler 20.03<br/>MLP cov 94.27, width 17.78, Winkler 20.61<br/>= coverage equalized; SPARC wins width-efficiency"]
     RESULTS --> HONEST["Honest negatives<br/>LQR wins raw AQL (1.171 vs 1.254, p=0.015)<br/>CRPS parity (1.910 vs 2.074)<br/>one ablation (no path embed, AQL 1.191) edges us<br/>scope: central 90% band, extreme events out of scope"]
-    ABLWHAT --> ABLTAB["Ablations (raw coverage; calibrated Winkler)<br/>No attention: 89.41 → 77.48 (-11.93pp), AQL 1.254 → 1.225<br/>= attention is the load-bearing calibration mechanism<br/>No identity -4.71pp vs no-μ -1.09pp = WHICH binds beats HOW large<br/>No temporal: AQL 1.682 = temporal drives point error<br/>No lags ≈ full (88.64) = lagged history redundant"]
-    ABLTAB --> ATTN_D5["Mechanism evidence<br/>attention 0.23-0.26 (mean 0.25) on top-3 μ slots<br/>about 12x the uniform 0.020<br/>peaks 0.260 at the highest-μ bin (max μ 84.8)"]
+    ABLWHAT --> ABLTAB["Ablations (raw coverage)<br/>Uniform attention: 89.41 → 77.48 (-11.93pp), AQL 1.254 → 1.225<br/>= attention is the load-bearing calibration mechanism<br/>No constraint-ID feature -4.71pp; zeroed path embedding (constant query) -7.11pp<br/>No temporal vector (incl. lags): AQL 1.682 = temporal drives point error<br/>Explicit energy term added ≈ full (88.64) = energy cancels in the spread<br/>WOMu (readout fixed to 1, no constraint info): -1.09pp = interpretation open"]
+    ABLTAB --> ATTN_D5["Mechanism evidence<br/>attention 0.23-0.26 (mean 0.25) on top-3 μ slots<br/>about 12x the uniform 0.020<br/>highest 0.260 in the top bin (mean max μ 59.3)"]
   end
 
   subgraph G_D6["D6 - Generalization"]
@@ -156,10 +155,10 @@ flowchart TD
 
   subgraph G_D8["D8 - First principles, decision, limits"]
     FP["First principles: why nothing beat SPARC"] --> F1["1 target is low-rank in the constraint dimension<br/>only SPARC projects onto it explicitly"]
-    FP --> F2["2 identity causes magnitude<br/>binding is the event; μ is downstream"]
+    FP --> F2["2 identity causes magnitude (hypothesis)<br/>binding is the event; μ is downstream<br/>not isolated by the WOMu ablation"]
     FP --> F3["3 AQL and Winkler are different functionals<br/>middle vs band edges"]
     FP --> F4["4 conformal equalizes coverage<br/>so the contest is width-at-coverage"]
-    FP --> F5["5 width/coverage coupling is a law here<br/>routing proved it: coverage collapsed to 64.7%"]
+    FP --> F5["5 width/coverage coupling is a law here<br/>routing proved it: coverage collapsed to 73.1%"]
     FP --> DEC["Decision tree<br/>PRIMARY: calibration + coherence + efficiency + OOD<br/>SAFE FLOOR: calibration + parity + efficiency<br/>BEAT-EVERYTHING: tested as Godmode, failed<br/>FORBIDDEN: hide LQR / compare only to weak baselines"]
     DEC --> LIM["Honest limitations<br/>no method is PIT-uniform<br/>AQL and CRPS are parity, not superiority<br/>cross-year error edge does not hold<br/>seasonal 3-window claim not in the canonical build<br/>one market, one year, one headline pair<br/>scope: central 90% band; extreme tail events out of scope"]
   end
@@ -178,7 +177,7 @@ flowchart TD
     CC11 --> CC12["C-PIT - PIT / KS calibration"]
     CC12 --> CC13["C-CONF - Conformal recalibration"]
     CC13 --> CC14["C-ATTN - Attention query/key/value"]
-    CC14 --> CC15["C-POOL - Mean pooling"]
+    CC14 --> CC15["C-SLOTS - Fixed 50 slots, zero-padded"]
     CC15 --> CC16["C-ABL - Ablation methodology"]
     CC16 --> CC17["C-SIG - 5-seed significance"]
     CC17 --> CC18["C-PARADOX - The metric-paradox"]
@@ -193,7 +192,7 @@ flowchart TD
     R3["R-AQL - 1.254 vs 1.171, p=0.015 (LQR significantly better)"] --> SRC1
     R4["R-AQCR - 0.11 vs 31.99"] --> SRC1
     R5["R-SIG - coverage t=8.33, p=0.0011"] --> SRC1
-    R6["R-ABL - 89.41 to 77.48; no-ID -4.71pp vs no-μ -1.09pp"] --> SRC1
+    R6["R-ABL - uniform attention 89.41 to 77.48; no constraint-ID feature -4.71pp; WOMu (readout fixed to 1) -1.09pp, not a magnitude test"] --> SRC1
     R7["R-ATTN - 0.23-0.26 (mean 0.25) vs uniform 0.020; 0.260 extreme"] --> SRC1
     R8["R-PARAM - 8,978 vs MLP 64,456 / Transformer 78,536"] --> SRC1
     R9["R-3PAIR - NORTH 93.87 / WEST 93.85"] --> SRC1

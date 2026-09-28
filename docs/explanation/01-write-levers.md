@@ -1,5 +1,7 @@
 # SPARC Paper — Catalog of Writing Levers
 
+> **Note 2026-09-27 (ADR-0016):** historical document — numbers are kept as they were recorded. Where this file describes the model, training or ablations, `code/models.py`, `code/data.py`, `code/main.py` and `code/results/results.json` take precedence; the current, code-accurate description is in [09-paper-handoff.md](09-paper-handoff.md) §2d and §5c.
+
 _Owner: Sami · Created: 2026-09-03 · Target: NeurIPS / UQ-application method paper, energy-framed_
 
 Each lever is tagged: **✅ standard-legitimate · ⚠️ use-with-care · ❌ backfires (do not)**. The two ❌ lines are the ones that turn an honest paper into a fabricated, desk-rejected one.

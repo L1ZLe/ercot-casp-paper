@@ -1,5 +1,7 @@
 # SPARC — What Changed at the 24 h Constraint Lead (the 1 h → 24 h shift)
 
+> **Note 2026-09-27 (ADR-0016):** historical document — numbers are kept as they were recorded. Where this file describes the model, training or ablations, `code/models.py`, `code/data.py`, `code/main.py` and `code/results/results.json` take precedence; the current, code-accurate description is in [09-paper-handoff.md](09-paper-handoff.md) §2d and §5c.
+
 - **Date**: 2026-09-26
 - **Scope**: the canonical run after ADR-0013 set `constraint_lead_hours = 24` (previous day's day-ahead clearing). Everything below is 5-seed unless noted.
 - **Canonical source**: `code/results/results.json`. The superseded 1 h run is archived at `code/results/_lead1h_20260925/`.
@@ -52,17 +54,17 @@ LQR still wins average error (AQL 1.171 vs 1.254) — now **significantly** (p=0
 
 ---
 
-## 4. Ablations (24 h, raw coverage; calibrated Winkler)
+## 4. Ablations (24 h, raw coverage; labels follow `code/models.py`, ADR-0016)
 
 | Ablation | raw cov | Δ vs full (89.41) | AQL | reading |
 |---|---|---|---|---|
 | Full SPARC | 89.41 | — | 1.254 | — |
-| **No attention** | 77.48 | **−11.93 pp** | 1.225 | attention is the load-bearing calibration mechanism |
-| No identity | 84.70 | −4.71 pp | 1.211 | *which* corridor binds matters |
-| No μ magnitude | 88.32 | −1.09 pp | 1.220 | *how large* barely matters |
-| No temporal | 88.67 | −0.74 pp | **1.682** | temporal drives **point error** |
-| No path embedding | 82.30 | −7.11 pp | **1.191** | still **edges us on AQL** (honest negative) |
-| No lagged spreads | 88.64 | −0.77 pp | 1.225 | lagged history ≈ redundant |
+| **Uniform attention** (`WOAttention`) | 77.48 | **−11.93 pp** | 1.225 | attention is the load-bearing calibration mechanism |
+| No constraint-ID feature (`WOID`) | 84.70 | −4.71 pp | 1.211 | *which* corridor binds matters |
+| Constant readout (`WOMu`: attended output ≡ 1, no constraint info reaches the head) | 88.32 | −1.09 pp | 1.220 | does **not** isolate μ magnitude — interpretation open |
+| No temporal vector incl. lags (`WOTemporal`) | 88.67 | −0.74 pp | **1.682** | temporal drives **point error** |
+| Zeroed pair embedding (`WOPathEmbed`, constant query) | 82.30 | −7.11 pp | **1.191** | still **edges us on AQL** (honest negative) |
+| Explicit energy term added (`WOEnergyCancel`) | 88.64 | −0.77 pp | 1.225 | an explicit energy term adds nothing (energy cancels in the spread) |
 
 ---
 

@@ -1,16 +1,15 @@
 flowchart TD
 subgraph G_D3["D3 - The model"]
-    IN["Inputs<br/>top-50 constraint slots (μ, identity, kV, flow)<br/>temporal Fourier, 3 lagged spreads, path embedding"] --> ID
-    IN --> MU
-    ID["Identity pathway<br/>MEAN-POOLED over binding constraints<br/>fixed size because K varies hourly<br/>captures WHICH set of corridors binds"] --> ATTN_D3
-    MU["Shadow-price pathway<br/>per-slot keys and values<br/>the VALUES carry the shadow-price (μ) signal"] --> ATTN_D3
-    TEMP["Temporal encoder"] --> ATTN_D3
-    Q["Query = the path asking<br/>which constraints matter for me"] --> ATTN_D3
+    IN["Inputs<br/>top-50 constraint slots, 4 numbers each<br/>(μ, constraint ID, kV level, flow ratio)<br/>temporal vector: 6 Fourier terms + 3 lagged spreads (18-d)<br/>path embedding"] --> ID
+    ID["Slot encoder<br/>one shared layer per slot (Linear 4→8 + ReLU)<br/>empty slots are zeros → always 50 slots<br/>the constraint ID is one of the 4 input numbers"] --> MU
+    MU["Keys and values<br/>keys = the encoded slots<br/>each value → one number μ̃_k<br/>(learned congestion signal of that constraint)"] --> ATTN_D3
+    TEMP["Temporal encoder<br/>Fourier terms + lagged spreads<br/>joins in the head, NOT in the attention"] --> HEAD
+    Q["Query = the path embedding only<br/>asks which constraints matter for this pair"] --> ATTN_D3
     ATTN_D3["Constraint attention<br/>a_k = exp(score_k) / Σ_j exp(score_j)<br/>Σ_k a_k = 1<br/>a_k = learned relative exposure weight<br/>(plays the role of ΔSF: positive + normalized,<br/>so it captures relative magnitude; sign and scale<br/>are absorbed downstream)"] --> HEAD
-    ATTN_D3 --> BLEND["Weighted blend of the value signals<br/>≈ Σ_k a_k · μ_k<br/>same form as Σ_k ΔSF_k · μ_k"]
-    HEAD["Quantile head<br/>soft flat head + crossing penalty<br/>raw AQCR 0.11% vs LQR 32.0%, MLP 15.1%<br/>(soft head; hard head 0.00% by construction)"] --> LOSS["Training loss<br/>L = Σ_t Σ_τ ρ_τ(y_t - q_hat_τ,t) + λ · crossing penalty<br/>ρ_τ(u) = u · (τ - I[u &lt; 0])<br/>penalty is training-only, never a metric"]
+    ATTN_D3 --> BLEND["Weighted blend of the value signals<br/>= Σ_k a_k · μ̃_k<br/>same form as Σ_k ΔSF_k · μ_k"]
+    HEAD["Quantile head<br/>[path embedding, temporal vector, attention output]<br/>→ MLP (128) → 7 quantiles<br/>soft head + crossing penalty, no sorting<br/>raw AQCR 0.11% vs LQR 32.0%, MLP 15.1%<br/>(hard head 0.00% by construction)"] --> LOSS["Training loss<br/>L = Σ_t Σ_τ ρ_τ(y_t - q_hat_τ,t) + λ · crossing penalty<br/>ρ_τ(u) = u · (τ - I[u &lt; 0])<br/>penalty is training-only, never a metric"]
     HEAD --> HARD2["Hard (hierarchical) head tested on SPARC<br/>calibrated Winkler 18.00 (hard) vs 18.20 (soft) → comparable; kept soft as flagship"]
-    LAG["Lagged-spread encoder"] --> HEAD
+    LAG["Lagged spreads t-24 / t-48 / t-168<br/>part of the temporal vector<br/>no separate encoder"] --> TEMP
 
     ATTN_D3 --> WHY_ROOT["Why attention, not something else?"]
     WHY_ROOT --> A1["Raw concatenation of the constraints<br/>REJECTED<br/>the number of binding constraints changes every hour<br/>the network needs a fixed-size input"]
@@ -18,7 +17,7 @@ subgraph G_D3["D3 - The model"]
     WHY_ROOT --> A3["MLP over the constraint features<br/>REJECTED<br/>no explicit weight per constraint<br/>cannot tell you which line drove the forecast"]
     WHY_ROOT --> A4["RNN or Transformer over the constraint set<br/>REJECTED<br/>a set has no order; first and last are interchangeable<br/>imposes an order that does not exist"]
     WHY_ROOT --> WIN["ATTENTION — CHOSEN<br/>handles a variable-size set<br/>gives a per-path weight to each constraint<br/>order-free (permutation-invariant)<br/>the weights play the role of learned ΔSF<br/>→ interpretable by construction"]
-    WHYID["Why mean pooling (identity pathway)<br/>K varies each hour → need a fixed-size vector<br/>order-independent and robust<br/>captures WHICH set of corridors binds"]
+    WHYID["Why 50 fixed slots<br/>K varies each hour → pad to 50 with zeros<br/>fixed-size input; attention then picks what matters"]
     OTHERS["What others do, and why it is wrong for this problem<br/>feed the price as a time series, never see the constraint set<br/>= model the shadow, not the cause"]
     WHYID --> OTHERS
   end

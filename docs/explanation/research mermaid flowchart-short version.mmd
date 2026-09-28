@@ -1,4 +1,5 @@
 flowchart TD
+  NOTE["HISTORICAL — 1 h / 2-seed run (numbers superseded)<br/>current version: 06-sparc-flowchart-20min · model and ablations corrected to the code, ADR-0016"]
   subgraph G_M0["M0 - Master spine"]
     S0["S0 - Definition<br/>SPARC: constraint-aware probabilistic<br/>forecaster of ERCOT day-ahead spreads"] --> S1
     S1["S1 - How prices form<br/>LMP = energy + congestion<br/>prices differ by location"] --> S2
@@ -34,7 +35,7 @@ flowchart TD
     P3 --> SP["Shadow price μₖ<br/>μₖ = marginal cost of relaxing<br/>constraint k by 1 MW"]
     SP --> EX_D1["Example: road at capacity<br/>one more MW costs +$20<br/>therefore μ = $20/MWh"]
     SP --> TOPK["Selection: per hour, per constraint<br/>sort by its own μ descending, take top 50<br/>binding only, snapshot lagged one hour"]
-    P1 --> SPREAD["Path spread<br/>ΔLMPₛ→d = LMP_d − LMP_s<br/>= Σₖ (SFₖ,d − SFₖ,s) · μₖ<br/>= Σₖ ΔSFₖ · μₖ"]
+    P1 --> SPREAD["Path spread<br/>ΔLMPₛ→d = LMP_d − LMP_s<br/>= Σₖ (SFₖ,d − SFₖ,s) · μₖ<br/>= Σₖ ΔSFₖ · μₖ<br/>(code target = src − snk = HB_HUBAVG − HB_PAN,<br/>i.e. the same quantity with the opposite sign)"]
     SPREAD --> C1["λ cancels exactly<br/>spread = pure congestion differential"]
     SPREAD --> DSF_D1["Differential shift factor<br/>ΔSFₖ = SFₖ,d − SFₖ,s<br/>Example: 0.6 − 0.1 = 0.5<br/>If μₖ = $20/MWh, contribution = $10/MWh"]
     DSF_D1 --> Z["If ΔSFₖ = 0, the constraint affects both ends equally<br/>Contribution to the spread = 0"]
@@ -61,17 +62,16 @@ flowchart TD
   end
 
   subgraph G_D3["D3 - The model"]
-    IN["Inputs<br/>top-50 constraint slots (μ, identity, kV, flow)<br/>temporal Fourier, 3 lagged spreads, path embedding"] --> ID
-    IN --> MU
-    ID["Identity pathway<br/>MEAN-POOLED over binding constraints<br/>fixed size because K varies hourly<br/>captures WHICH set of corridors binds"] --> ATTN_D3
-    MU["Shadow-price pathway<br/>per-slot keys and values<br/>the VALUES carry the shadow-price (μ) signal"] --> ATTN_D3
-    TEMP["Temporal encoder"] --> ATTN_D3
-    Q["Query = the path asking<br/>which constraints matter for me"] --> ATTN_D3
+    IN["Inputs<br/>top-50 constraint slots, 4 numbers each<br/>(μ, constraint ID, kV level, flow ratio)<br/>temporal vector: 6 Fourier terms + 3 lagged spreads (18-d)<br/>path embedding"] --> ID
+    ID["Slot encoder<br/>one shared layer per slot (Linear 4→8 + ReLU)<br/>empty slots are zeros → always 50 slots<br/>the constraint ID is one of the 4 input numbers"] --> MU
+    MU["Keys and values<br/>keys = the encoded slots<br/>each value → one number μ̃_k<br/>(learned congestion signal of that constraint)"] --> ATTN_D3
+    TEMP["Temporal encoder<br/>Fourier terms + lagged spreads<br/>joins in the head, NOT in the attention"] --> HEAD
+    Q["Query = the path embedding only<br/>asks which constraints matter for this pair"] --> ATTN_D3
     ATTN_D3["Constraint attention<br/>aₖ = exp(scoreₖ) / Σⱼ exp(scoreⱼ)<br/>Σₖ aₖ = 1<br/>aₖ = learned relative exposure weight<br/>(plays the role of ΔSF: positive + normalized,<br/>so it captures relative magnitude)"] --> HEAD
-    ATTN_D3 --> BLEND["Weighted blend of the value signals<br/>≈ Σₖ aₖ · μₖ<br/>same form as Σₖ ΔSFₖ · μₖ"]
+    ATTN_D3 --> BLEND["Weighted blend of the value signals<br/>= Σₖ aₖ · μ̃ₖ<br/>same form as Σₖ ΔSFₖ · μₖ"]
     HEAD["Quantile head<br/>soft flat head + crossing penalty<br/>AQCR 0.507% = LOWEST of all learned models"] --> LOSS["Training loss<br/>ℒ = Σₜ Στ ρτ(yₜ − q̂τ,t) + λ · crossing penalty<br/>ρτ(u) = u · (τ − I[u &lt; 0])<br/>penalty is training-only, never a metric"]
     HEAD --> HARD2["Anchor hard head tested on SPARC<br/>Winkler 17.645 vs soft 17.524 → kept soft"]
-    LAG["Lagged-spread encoder"] --> HEAD
+    LAG["Lagged spreads t-24 / t-48 / t-168<br/>part of the temporal vector<br/>no separate encoder"] --> TEMP
 
     ATTN_D3 --> WHY_ROOT["Why attention, not something else?"]
     WHY_ROOT --> A1["Raw concatenation of the constraints<br/>REJECTED<br/>the number of binding constraints changes every hour<br/>the network needs a fixed-size input"]
@@ -100,7 +100,7 @@ flowchart TD
     PROTO["Protocol<br/>CPU, chronological 70-15-15<br/>5 seeds, pure-pinball AQL<br/>ablation = remove one part, retrain, measure the drop"] --> RESULTS
     RESULTS["Results<br/>SPARC coverage 87.94, Winkler 20.72, AQL 1.335, AQCR 0.507"] --> WINS["Findings<br/>best calibrated, beats linear AND deep<br/>AQL parity with LQR, beats all deep nets<br/>best coherence; 7 to 9 times smaller<br/>significant: coverage t 6.50, p 0.003"]
     RESULTS --> HONEST["Honest negatives<br/>LQR edges AQL slightly; CRPS parity<br/>scope: central 90% band, extreme events out of scope"]
-    PROTO --> ABL["Ablations<br/>No attention: coverage 87.9 to 78.6, AQL flat<br/>= attention is the load-bearing calibration mechanism<br/>No identity −7.55pp vs no-μ −0.97pp<br/>= WHICH binds beats HOW large<br/>No lags equals full = lagged history redundant"]
+    PROTO --> ABL["Ablations<br/>No attention: coverage 87.9 to 78.6, AQL flat<br/>= attention is the load-bearing calibration mechanism<br/>No constraint-ID feature −7.55pp; WOMu (readout fixed to 1) −0.97pp<br/>WOMu is not a magnitude test (ADR-0016)<br/>Explicit energy term added ≈ full = energy cancels"]
     ABL --> ATTN_D5["Mechanism<br/>attention 0.23 to 0.26 on top-3 μ slots<br/>about 12× the uniform 0.020"]
   end
 

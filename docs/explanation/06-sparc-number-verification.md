@@ -1,5 +1,7 @@
 # SPARC — Number Verification Against Canonical `results.json`
 
+> **Note 2026-09-27 (ADR-0016):** historical document — numbers are kept as they were recorded. Where this file describes the model, training or ablations, `code/models.py`, `code/data.py`, `code/main.py` and `code/results/results.json` take precedence; the current, code-accurate description is in [09-paper-handoff.md](09-paper-handoff.md) §2d and §5c.
+
 > **UPDATE 2026-09-25 (ADR-0013).** The canonical run now uses a **24 h** constraint lead (the previous day's day-ahead clearing). Headline numbers changed: SPARC raw coverage **89.41**, Winkler **20.25**, AQL **1.254**, AQCR **0.11**; calibrated Winkler **18.20** (hard head **18.00**); OOD and sensitivity are now 5-seed and the sensitivity table **varies**. This audit was written against the earlier **1 h** run (archived at `code/results/_lead1h_20260925/`); its verdicts about the stale 2-seed docs still hold.
 >
 > **Canonical numbers live in `code/results/results.json` — do not quote the tables below as current.**

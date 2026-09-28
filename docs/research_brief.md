@@ -108,7 +108,7 @@ Reference implementation: several baselines, five seeds (42-46), chronological (
 - **Significance:** success-rate advantage vs the best linear baseline t=8.33, p=0.0011; the coverage margin over the MLP is *not* significant (p=0.125).
 
 ### Mechanism evidence (with numbers)
-- Attention concentrates on the top-3 shadow-price slots at **~0.23-0.26 (~12x the uniform baseline 0.020)**, rising to **0.260 at extreme congestion** (max shadow price 84.8).
+- Attention concentrates on the top-3 shadow-price slots at **~0.23-0.26 (~12x the uniform baseline 0.020)**, rising to **0.260 at extreme congestion** (top bin: mean max shadow price 59.3).
 - **Ablation:** removing the constraint/attention-weighting component drops calibration **89.4 -> 77.5** in-sample — the constraint-weighting drives the reliability edge, not decorative.
 
 ### Out-of-sample, out-of-distribution (with numbers)

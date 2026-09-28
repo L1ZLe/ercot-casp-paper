@@ -317,7 +317,7 @@ Paper-writing phase. The canonical experiment is the **24 h / 5-seed** run (ADR-
 - **SPARC** — Constraint-Aware Spread Predictor, the proposed model.
 - **AQL** — Average Quantile Loss; pure average pinball across the quantile grid, the headline metric (ADR-0004).
 - **LA-CASF** — Loss-Augmented Constraint-Aware Spread Forecasting penalty; a *training* objective, never conflated with metrics (ADR-0004).
-- **AblationWOMu / WOID / WOTemporal / WOPathEmbed / WOAttention / WOEnergyCancel** — ablated variants of SPARC (each drops one component).
+- **AblationWOMu / WOID / WOTemporal / WOPathEmbed / WOAttention / WOEnergyCancel** — ablated variants of SPARC. What each one changes is defined by `code/models.py` (see ADR-0016): WOMu fixes the attended readout to 1, WOID drops the constraint-ID slot feature, WOTemporal drops the temporal vector (incl. lags), WOPathEmbed zeroes the pair embedding (constant query), WOAttention uses uniform attention, WOEnergyCancel *adds* an explicit energy (λ) term.
 - **BaselineLQR / MLP / LSTM / XGBoost / RF / Naive1 / Naive2** — baseline models.
 
 ### Project-specific "never do"

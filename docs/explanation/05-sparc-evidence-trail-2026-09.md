@@ -1,5 +1,7 @@
 # SPARC — Evidence Trail & Metric-Paradox Support Document (2026-09-13/14)
 
+> **Note 2026-09-27 (ADR-0016):** historical document — numbers are kept as they were recorded. Where this file describes the model, training or ablations, `code/models.py`, `code/data.py`, `code/main.py` and `code/results/results.json` take precedence; the current, code-accurate description is in [09-paper-handoff.md](09-paper-handoff.md) §2d and §5c.
+
 - **Date**: 2026-09-14
 - **Audience**: self + paper reviewers; authored to *support the paper claim*, not merely to log a session
 - **Primary artifact**: `code/results/results.json` (schema 1.3, generated 2026-09-13T22:20Z on the expanded 2026 data) plus the isolated Godmode probe outputs under `godmode/results/`
