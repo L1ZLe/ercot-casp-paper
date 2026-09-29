@@ -14,9 +14,9 @@ __pycache__/
 .venv/
 .ruff_cache/
 
-# Derived experiment results. The current canonical summary artifacts are
-# committed for collaborators (ADR-0012); per-seed arrays, logs, checkpoints,
-# and the stale 2-seed run stay ignored.
+# Derived experiment results. Canonical summary artifacts (ADR-0012) and the
+# per-seed prediction arrays (ADR-0017) are committed for collaborators; logs,
+# checkpoints, and the stale 2-seed run stay ignored.
 code/results/*
 !code/results/results.json
 !code/results/main_conditions.json
@@ -27,8 +27,14 @@ code/results/*
 !code/results/sensitivity_results.json
 !code/results/attention_analysis.json
 !code/results/README.md
-*.npy
+!code/results/per_seed/
 chart_tmp/
+
+# Per-seed prediction/target arrays (ADR-0017): committed so a collaborator
+# without the external ERCOT data can regenerate figures and recompute metrics.
+*.npy
+!code/results/per_seed/*.npy
+!godmode/results/per_seed/*.npy
 
 # Trained model checkpoints — single home in models/; regenerable by training
 # (policy in ADR-0002, TODO-2). The old root-level best_model_*.pth artifacts
