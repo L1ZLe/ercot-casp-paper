@@ -191,6 +191,7 @@ _Where the numbers live and how to regenerate them._
 | purpose | path |
 |---|---|
 | Canonical numbers | `code/results/results.json` |
+| Per-seed arrays (figure regeneration, new metrics) | `code/results/per_seed/*.npy` (`*_pred`, `*_target`, and `*_attn`/`*_mu` for attention models), `godmode/results/per_seed/*.npy` |
 | Full script + flowcharts | `07-sparc-briefing-full.md`, `07-sparc-flowchart-full.png` / `.svg` |
 | 20-min cut | `06-sparc-briefing-20min.md` |
 | Claims/scope | `03-paper-framing.md` |
@@ -200,6 +201,8 @@ _Where the numbers live and how to regenerate them._
 | Protocol ADRs | `adr/0004` (protocol), `adr/0013` (24 h lead), `adr/0014` (OOD numbers) |
 
 Regenerate everything (hours): `bash godmode/run_all_5seed.sh` (godmode only) or the main pipeline at `24 h` via `code/main.py` + the `run_*.py` runners + `code/build_results.py`.
+
+> **Figures are stale.** The committed `charts/fig_*.png` were built 2026-09-01 (pre-24 h) except `fig_attn_concentration.png` (2026-09-25). Rebuild them from the per-seed arrays in `code/results/per_seed/` and `godmode/results/per_seed/` (committed per ADR-0017) — do not screenshot the old figures into the paper.
 
 ## 7. Do-not list
 
